@@ -1,0 +1,321 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>DATABASE &mdash; HistoryChat 00 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '00',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="HistoryChat 00 documentation" href="index.html" />
+    <link rel="prev" title="LOG CHAT" href="logchat.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="logchat.html" title="LOG CHAT"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">HistoryChat 00 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="database">
+<h1>DATABASE<a class="headerlink" href="#database" title="Permalink to this headline">¶</a></h1>
+<p>There are two databases are used to store log chat those are mongodb and postgresql. To respective to our system, mongodb will be used to contain just the last limited number of messages - default is 50 of each communication. Postgresql will used to contain all log chat. Follow is database design for our log chat.</p>
+<div class="section" id="c2c">
+<h2>C2C<a class="headerlink" href="#c2c" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">Mongodb</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+        <span class="s2">&quot;JidFrom&quot;</span><span class="o">:</span> <span class="s2">&quot;String&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;JidTo&quot;</span><span class="o">:</span> <span class="s2">&quot;String&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Body&quot;</span><span class="o">:</span>
+                <span class="p">[</span>
+                        <span class="p">{</span>
+                                <span class="s2">&quot;uid&quot;</span> <span class="o">:</span> <span class="s2">&quot;integer&quot;</span><span class="p">,</span>
+                                <span class="s2">&quot;Jid&quot;</span><span class="o">:</span> <span class="s2">&quot;String (Jid of sender)&quot;</span><span class="p">,</span>
+                                <span class="s2">&quot;message&quot;</span><span class="o">:</span> <span class="s2">&quot;String&quot;</span><span class="p">,</span>
+                                <span class="s2">&quot;file&quot;</span><span class="o">:</span> <span class="s2">&quot;String (thumbnailUrl;mimeType;fileUrl;size;name)&quot;</span><span class="p">,</span>
+                                <span class="s2">&quot;time&quot;</span><span class="o">:</span> <span class="s2">&quot;Time&quot;</span>
+                        <span class="p">}</span>
+                <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</li>
+</ol>
+<blockquote>
+<div><ul>
+<li><p class="first">JidFrom and JidTo is pair bareJIDs of sender and receiver (don’t care about the order)</p>
+</li>
+<li><dl class="first docutils">
+<dt>Body</dt>
+<dd><ul class="first last simple">
+<li>Each message will be assigned by an unique uid.</li>
+<li>Jid is bareJid of sender</li>
+<li>message is content of message body</li>
+<li>file is content of attached file, File is a string that content all info of file and separate by “;”</li>
+<li>time is time of sended message</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+<ol class="arabic" start="2">
+<li><p class="first">Postgresql</p>
+<p>There are two tables utilized those are HistoryChat and HistoryChatMessage.</p>
+<p>HistoryChat Table:</p>
+<blockquote>
+<div><table border="1" class="docutils">
+<colgroup>
+<col width="43%" />
+<col width="29%" />
+<col width="29%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">JidFrom</th>
+<th class="head">JidTo</th>
+<th class="head">bodyId</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<p>HistoryChatMessage Table:</p>
+<blockquote>
+<div><table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="13%" />
+<col width="22%" />
+<col width="16%" />
+<col width="16%" />
+<col width="16%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">bodyId</th>
+<th class="head">uid</th>
+<th class="head">message</th>
+<th class="head">file</th>
+<th class="head">event</th>
+<th class="head">stamp</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<ul class="last simple">
+<li>ChatHistory has many Messages.</li>
+<li>event column is only used for muc.</li>
+</ul>
+</div>
+</li>
+</ol>
+</div>
+<div class="section" id="muc">
+<h2>MUC<a class="headerlink" href="#muc" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">Mongodb</p>
+<div class="highlight-javascript"><pre>{
+    "Jid": "String",
+    "JidMember": "String (jid1;jid2;jid3;...)",
+    "Body":
+        [
+                {
+                    "uid": "integer",
+                    "Jid": "String (Jid of sender)",
+                    "message": "String",
+                    "file": "String (thumbnailUrl;mimeType;fileUrl;size;name)",
+                    "event": "String ("joined" or "left"),
+                    "time": "Time"
+                }
+        ]
+}</pre>
+</div>
+</li>
+</ol>
+<blockquote>
+<div><ul>
+<li><p class="first">Jid is bareJID of room.</p>
+</li>
+<li><p class="first">JidMember: is list of member’s jid, separete by “;”</p>
+</li>
+<li><dl class="first docutils">
+<dt>Body</dt>
+<dd><ul class="first last simple">
+<li>Jid is bareJid of sender</li>
+<li>message is content of message body</li>
+<li>file is content of attached file, File is a string that content all info of file and separate by “;”</li>
+<li>event to save status joined or left of user in room.</li>
+<li>time is time of sended message</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+<ol class="arabic" start="2">
+<li><p class="first">Postgresql</p>
+<p>HistoryChat Table:</p>
+<blockquote>
+<div><table border="1" class="docutils">
+<colgroup>
+<col width="43%" />
+<col width="29%" />
+<col width="29%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">JidFrom</th>
+<th class="head">JidTo</th>
+<th class="head">bodyId</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<p>HistoryChatMessage Table:</p>
+<blockquote>
+<div><table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="13%" />
+<col width="22%" />
+<col width="16%" />
+<col width="16%" />
+<col width="16%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">bodyId</th>
+<th class="head">uid</th>
+<th class="head">message</th>
+<th class="head">file</th>
+<th class="head">event</th>
+<th class="head">stamp</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">ChatHistory has many Messages.</p>
+</div>
+</li>
+</ol>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">DATABASE</a><ul>
+<li><a class="reference internal" href="#c2c">C2C</a></li>
+<li><a class="reference internal" href="#muc">MUC</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="logchat.html"
+                        title="previous chapter">LOG CHAT</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/logchatdb.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="logchat.html" title="LOG CHAT"
+             >previous</a> |</li>
+        <li><a href="index.html">HistoryChat 00 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, HueTran.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b3.
+    </div>
+  </body>
+</html>

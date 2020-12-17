@@ -1,0 +1,2062 @@
+diff -ruN ejabberd_tests/default.spec ejabberd_tests_new/default.spec
+--- ejabberd_tests/default.spec	2015-10-30 17:08:16.918354773 +0700
++++ ejabberd_tests_new/default.spec	2015-10-30 17:12:07.486344493 +0700
+@@ -1,20 +1,23 @@
+-{suites, "tests", adhoc_SUITE}.
+-{suites, "tests", last_SUITE}.
+-{suites, "tests", login_SUITE}.
+-{suites, "tests", muc_SUITE}.
+-{suites, "tests", mam_SUITE}.
+-{suites, "tests", offline_SUITE}.
+-{suites, "tests", presence_SUITE}.
+-{suites, "tests", privacy_SUITE}.
+-{suites, "tests", private_SUITE}.
+-{suites, "tests", sic_SUITE}.
+-{suites, "tests", shared_roster_SUITE}.
+-{suites, "tests", vcard_simple_SUITE}.
+-{suites, "tests", websockets_SUITE}.
+-{suites, "tests", metrics_c2s_SUITE}.
+-{suites, "tests", metrics_roster_SUITE}.
+-{suites, "tests", metrics_register_SUITE}.
+-{suites, "tests", metrics_session_SUITE}.
+-{suites, "tests", system_monitor_SUITE}.
++%{suites, "tests", adhoc_SUITE}.
++%{suites, "tests", last_SUITE}.
++%{suites, "tests", login_SUITE}.
++%{suites, "tests", muc_SUITE}.
++%{suites, "tests", mam_SUITE}.
++%{suites, "tests", offline_SUITE}.
++%{suites, "tests", presence_SUITE}.
++%{suites, "tests", privacy_SUITE}.
++%{suites, "tests", private_SUITE}.
++%{suites, "tests", sic_SUITE}.
++%{suites, "tests", shared_roster_SUITE}.
++%{suites, "tests", vcard_simple_SUITE}.
++%{suites, "tests", websockets_SUITE}.
++%{suites, "tests", metrics_c2s_SUITE}.
++%{suites, "tests", metrics_roster_SUITE}.
++%{suites, "tests", metrics_register_SUITE}.
++%{suites, "tests", metrics_session_SUITE}.
++%{suites, "tests", system_monitor_SUITE}.
++%{suites, "tests", mod_11_timeline_SUITE}.
++%{suites, "tests", mod_grouptimeline_SUITE}.
++{suites, "tests", mod_muc_SUITE}.
+ {config, ["test.config"]}.
+ {logdir, "ct_report"}.
+diff -ruN ejabberd_tests/run_common_test.erl ejabberd_tests_new/run_common_test.erl
+--- ejabberd_tests/run_common_test.erl	2015-10-30 17:08:16.918354773 +0700
++++ ejabberd_tests_new/run_common_test.erl	2015-10-30 17:12:07.438344496 +0700
+@@ -97,23 +97,26 @@
+ run_config_test({Name, Variables}, Test, N, Tests) ->
+     Node = get_ejabberd_node(),
+     {ok, Cwd} = call(Node, file, get_cwd, []),
+-    Cfg = filename:join([Cwd, "..", "..", "rel", "files", "ejabberd.cfg"]),
+-    Vars = filename:join([Cwd, "..", "..", "rel", "reltool_vars", "node1_vars.config"]),
++	{ok, Dir} = file:get_cwd(),
++    Cfg = filename:join([Dir, "..", "..", "rel", "files", "ejabberd.cfg"]),
++    Vars = filename:join([Dir, "..", "..", "rel", "reltool_vars", "node1_vars.config"]),
+     CfgFile = filename:join([Cwd, "etc", "ejabberd.cfg"]),
+     {ok, Template} = call(Node, file, read_file, [Cfg]),
++	{ok, OldCfg} = call(Node, file, read_file, [CfgFile]),
+     {ok, Default} = call(Node, file, consult, [Vars]),
+     NewVars = lists:foldl(fun({Var,Val}, Acc) ->
+                     lists:keystore(Var, 1, Acc, {Var,Val})
+             end, Default, Variables),
+     LTemplate = binary_to_list(Template),
+-    NewCfgFile = mustache:render(LTemplate, dict:from_list(NewVars)),
+-    ok = call(Node, file, write_file, [CfgFile, NewCfgFile]),
++    %NewCfgFile = mustache:render(LTemplate, dict:from_list(NewVars)),
++    %ok = call(Node, file, write_file, [CfgFile, NewCfgFile]),
++	ok = call(Node, file, write_file, [CfgFile, Template]),
+     call(Node, application, stop, [ejabberd]),
+     call(Node, application, start, [ejabberd]),
+     error_logger:info_msg("Configuration ~p of ~p: ~p started.~n",
+                           [N, Tests, Name]),
+     Result = ct:run_test([{label, Name} | Test]),
+-    ok = call(Node, file, write_file, [CfgFile, Template]),
++    ok = call(Node, file, write_file, [CfgFile, OldCfg]),
+     case Result of
+         {error, Reason} ->
+             throw({ct_error, Reason});
+diff -ruN ejabberd_tests/test.config ejabberd_tests_new/test.config
+--- ejabberd_tests/test.config	2015-10-30 17:08:16.918354773 +0700
++++ ejabberd_tests_new/test.config	2015-10-30 17:12:07.486344493 +0700
+@@ -1,7 +1,7 @@
+ %% -*- mode: erlang;erlang-indent-level: 4;indent-tabs-mode: nil -*-
+ 
+ %% the Erlang node name of tested ejabberd/MongooseIM
+-{ejabberd_node, 'ejabberd@localhost'}.
++{ejabberd_node, 'mongooseim@localhost'}.
+ {ejabberd_cookie, ejabberd}.
+ %% the main XMPP domain served by the tested ejabberd/MongooseIM
+ {ejabberd_domain, <<"localhost">>}.
+@@ -13,39 +13,41 @@
+ 
+ {escalus_users, [
+     {alice, [
+-        {username, <<"alice">>},
++        {username, <<"test1-7258-11e5-80b7-1fd3f5f07578_63d56f51-a8aa-41d8-87f7-c54863bc1072">>},
+         {server, <<"localhost">>},
+         {password, <<"makota">>},
+         {compression, <<"zlib">>}]},
+     {bob, [
+-        {username, <<"bob">>},
++        {username, <<"test2-6da4-11e5-91ba-e7e30ad664f3_63d56f51-a8aa-41d8-87f7-c54863bc1072">>},
+         {server, <<"localhost">>},
+-        {password, <<"makrolika">>},
+-        {ssl, optional}]},
++        {password, <<"makrolika">>}]},
++        %{ssl, optional}]},
+     {carol, [
+-        {username, <<"carol">>},
++        {username, <<"test3-719d-11e5-9207-b5346d9428f0_63d56f51-a8aa-41d8-87f7-c54863bc1072">>},
+         {server, <<"localhost">>},
+-        {password, <<"jinglebells">>},
+-        {transport, bosh},
+-        {path, <<"/http-bind">>},
+-        {port, 5280}]},
++        {password, <<"jinglebells">>}%,
++%        {transport, bosh},
++%        {path, <<"/http-bind">>},
++%        {port, 5280}
++	]},
+     {kate, [
+-        {username, <<"kate">>},
++        {username, <<"test4-6ca0-11e5-b3eb-4bb7553ab5fd_63d56f51-a8aa-41d8-87f7-c54863bc1072">>},
+         {server, <<"localhost">>},
+         {password, <<"makrowe;p">>}]},
+         %%{port, 5280},
+         %%{transport, bosh}]},
+     {mike, [
+-        {username, <<"mike">>},
++        {username, <<"test5-6b38-11e5-9476-8d509420ffec_63d56f51-a8aa-41d8-87f7-c54863bc1072">>},
+         {server, <<"localhost">>},
+         {password, <<"nicniema">>}]},
+     {geralt, [
+-        {username, <<"geralt">>},
++        {username, <<"test6-9ij3-11e5-9216-8raru8s0ffec_63d56f51-a8aa-41d8-87f7-c54863bc1072">>},
+         {server, <<"localhost">>},
+-        {password, <<"witcher">>},
+-        {transport, ws},
+-        {port, 5280},
+-        {wspath, <<"/ws-xmpp">>}]}
++        {password, <<"witcher">>}%,
++    %    {transport, ws},
++    %    {port, 5280},
++    %    {wspath, <<"/ws-xmpp">>}
++	]}
+ ]}.
+ 
+ {escalus_server2_users, [
+@@ -82,50 +84,50 @@
+ ]}.
+ 
+ {ejabberd_configs, [
+-    {internal_mnesia,
+-     [{sm_backend, "{mnesia, []}"},
+-      {auth_method, "internal"}]},
+-    {internal_redis,
+-     [{sm_backend, "{redis, [{pool_size, 3}, {worker_config, [{host, \"localhost\"}, {port, 6379}]}]}"},
+-      {auth_method, "internal"}]},
+-    {odbc_pgsql_mnesia,
+-     [{sm_backend, "{mnesia, []}"},
+-      {auth_method, "odbc"},
+-      {odbc_server, "{odbc_server, {pgsql, \"localhost\", \"ejabberd\", \"ejabberd\", \"%ODBC_PASSWORD%\"}}."},
+-      {mod_last, "{mod_last_odbc, []},"},
+-      {mod_privacy, "{mod_privacy, [{backend, odbc}]},"},
+-      {mod_private, "{mod_private, [{backend, odbc}]},"},
+-      {mod_offline, "{mod_offline, [{backend, odbc}]},"},
+-      {mod_vcard, "{mod_vcard, [{backend, odbc}]},"},
+-      {mod_roster, "{mod_roster_odbc, []},"}]},
+-    {odbc_mnesia,
+-     [{sm_backend, "{mnesia, []}"},
+-      {auth_method, "odbc"},
+-      {odbc_server, "{odbc_server, {mysql, \"localhost\", \"ejabberd\", \"ejabberd\", \"%ODBC_PASSWORD%\"}}."},
+-      {mod_last, "{mod_last_odbc, []},"},
+-      {mod_privacy, "{mod_privacy, [{backend, odbc}]},"},
+-      {mod_private, "{mod_private, [{backend, odbc}]},"},
+-      {mod_offline, "{mod_offline, [{backend, odbc}]},"},
+-      {mod_vcard, "{mod_vcard, [{backend, odbc}]},"},
+-      {mod_roster, "{mod_roster_odbc, []},"}]},
+-    {odbc_redis,
+-     [{sm_backend, "{redis, [{pool_size, 3}, {worker_config, [{host, \"localhost\"}, {port, 6379}]}]}"},
+-      {auth_method, "odbc"},
+-      {odbc_server, "{odbc_server, {mysql, \"localhost\", \"ejabberd\", \"ejabberd\", \"%ODBC_PASSWORD%\"}}."},
+-      {mod_last, "{mod_last_odbc, []},"},
+-      {mod_privacy, "{mod_privacy, [{backend, odbc}]},"},
+-      {mod_private, "{mod_private, [{backend, odbc}]},"},
+-      {mod_offline, "{mod_offline, [{backend, odbc}]},"},
+-      {mod_vcard, "{mod_vcard, [{backend, odbc}]},"},
+-      {mod_roster, "{mod_roster_odbc, []},"}]},
+-    {external_mnesia,
+-     [{sm_backend, "{mnesia, []}"},
+-      {auth_method, "external"},
+-      {ext_auth_script, "{extauth_program, \"/tmp/sample_external_auth.py\"}."}]},
+-    {external_redis,
+-     [{sm_backend, "{redis, [{pool_size, 3}, {worker_config, [{host, \"localhost\"}, {port, 6379}]}]}"},
+-      {auth_method, "external"},
+-      {ext_auth_script, "{extauth_program, \"/tmp/sample_external_auth.py\"}."}]},
++%    {internal_mnesia,
++%     [{sm_backend, "{mnesia, []}"},
++%      {auth_method, "internal"}]},
++%    {internal_redis,
++%     [{sm_backend, "{redis, [{pool_size, 3}, {worker_config, [{host, \"localhost\"}, {port, 6379}]}]}"},
++%      {auth_method, "internal"}]},
++%    {odbc_pgsql_mnesia,
++%     [{sm_backend, "{mnesia, []}"},
++%      {auth_method, "odbc"},
++%      {odbc_server, "{odbc_server, {pgsql, \"localhost\", \"ejabberd\", \"ejabberd\", \"%ODBC_PASSWORD%\"}}."},
++%      {mod_last, "{mod_last_odbc, []},"},
++%      {mod_privacy, "{mod_privacy, [{backend, odbc}]},"},
++%      {mod_private, "{mod_private, [{backend, odbc}]},"},
++%      {mod_offline, "{mod_offline, [{backend, odbc}]},"},
++%      {mod_vcard, "{mod_vcard, [{backend, odbc}]},"},
++%      {mod_roster, "{mod_roster_odbc, []},"}]},
++%    {odbc_mnesia,
++%     [{sm_backend, "{mnesia, []}"},
++%      {auth_method, "odbc"},
++%      {odbc_server, "{odbc_server, {mysql, \"localhost\", \"ejabberd\", \"ejabberd\", \"%ODBC_PASSWORD%\"}}."},
++%      {mod_last, "{mod_last_odbc, []},"},
++%      {mod_privacy, "{mod_privacy, [{backend, odbc}]},"},
++%      {mod_private, "{mod_private, [{backend, odbc}]},"},
++%      {mod_offline, "{mod_offline, [{backend, odbc}]},"},
++%      {mod_vcard, "{mod_vcard, [{backend, odbc}]},"},
++%      {mod_roster, "{mod_roster_odbc, []},"}]},
++%    {odbc_redis,
++%     [{sm_backend, "{redis, [{pool_size, 3}, {worker_config, [{host, \"localhost\"}, {port, 6379}]}]}"},
++%      {auth_method, "odbc"},
++%      {odbc_server, "{odbc_server, {mysql, \"localhost\", \"ejabberd\", \"ejabberd\", \"%ODBC_PASSWORD%\"}}."},
++%      {mod_last, "{mod_last_odbc, []},"},
++%      {mod_privacy, "{mod_privacy, [{backend, odbc}]},"},
++%      {mod_private, "{mod_private, [{backend, odbc}]},"},
++%      {mod_offline, "{mod_offline, [{backend, odbc}]},"},
++%      {mod_vcard, "{mod_vcard, [{backend, odbc}]},"},
++%      {mod_roster, "{mod_roster_odbc, []},"}]},
++%    {external_mnesia,
++%     [{sm_backend, "{mnesia, []}"},
++%      {auth_method, "external"},
++%      {ext_auth_script, "{extauth_program, \"/tmp/sample_external_auth.py\"}."}]},
++%    {external_redis,
++%     [{sm_backend, "{redis, [{pool_size, 3}, {worker_config, [{host, \"localhost\"}, {port, 6379}]}]}"},
++%      {auth_method, "external"},
++%      {ext_auth_script, "{extauth_program, \"/tmp/sample_external_auth.py\"}."}]},
+     {ldap_mnesia,
+      [{sm_backend, "{mnesia, []}"},
+       {auth_method, "ldap"},
+diff -ruN ejabberd_tests/tests/message_utils.erl ejabberd_tests_new/tests/message_utils.erl
+--- ejabberd_tests/tests/message_utils.erl	1970-01-01 08:00:00.000000000 +0800
++++ ejabberd_tests_new/tests/message_utils.erl	2015-10-30 17:12:07.486344493 +0700
+@@ -0,0 +1,196 @@
++-module(message_utils).
++-compile([export_all]).
++
++-include_lib("escalus/include/escalus.hrl").
++-include_lib("escalus/include/escalus_xmlns.hrl").
++-include_lib("common_test/include/ct.hrl").
++-include_lib("exml/include/exml_stream.hrl").
++
++clean_archive(Config) ->
++        SUs = serv_users(Config),
++        [ delete_user_room(S, U) || {S, U} <- SUs],
++        Config.
++
++serv_users(Config) ->
++    [serv_user(Config, UserSpec)
++     || {_, UserSpec} <- escalus_users:get_users(all)].
++
++serv_user(Config, UserSpec) ->
++    [Username, Server, _Pass] = escalus_users:get_usp(Config, UserSpec),
++    {Server, Username}.
++
++delete_user_room(Server, User) ->
++    rpc_apply(mod_muc, delete_user_rooms, [User, Server]).
++
++rpc_apply(M, F, Args) ->
++    case escalus_ejabberd:rpc(M, F, Args) of
++    {badrpc, Reason} ->
++        ct:fail("~p:~p/~p with arguments ~w fails with reason ~p.",
++                [M, F, length(Args), Args, Reason]);
++    Result ->
++        Result
++    end.
++
++delete_messages(Selector) ->
++	rpc_apply(mod_11_timeline, delete_messages, [Selector]).
++
++set_message_with_file(Recipient, Type, BodyMsg, FileName, FileSize, FileUrl, MimeType, ThumbnailUrl, ThumbnailWidth, ThumbnailHeight) ->
++       #xmlel{name = <<"message">>,
++           attrs = [{<<"type">>, Type},
++                    {<<"to">>, Recipient}],
++           children = [#xmlel{name = <<"body">>, 
++						children = [exml:escape_cdata(BodyMsg)]}] ++
++					  [#xmlel{name = <<"file">>,
++                        children = [#xmlel{name = <<"name">>,
++										children = [exml:escape_cdata(FileName)]}] ++ 
++									[#xmlel{name = <<"size">>, 
++										children = #xmlcdata{content = integer_to_list(FileSize)}}] ++
++									[#xmlel{name = <<"fileUrl">>,
++                                        children = [exml:escape_cdata(FileUrl)]}] ++
++									[#xmlel{name = <<"mimeType">>,
++                                        children = [exml:escape_cdata(MimeType)]}] ++
++									[#xmlel{name = <<"thumbnailUrl">>,
++                                        children = [exml:escape_cdata(ThumbnailUrl)]}] ++
++									[#xmlel{name = <<"thumbnailWidth">>,
++                                        children = #xmlcdata{content = integer_to_list(ThumbnailWidth)}}] ++
++									[#xmlel{name = <<"thumbnailHeight">>,
++                                        children = #xmlcdata{content = integer_to_list(ThumbnailHeight)}}]
++									}]
++				}.
++
++set_message_with_oembed(Recipient, Type, BodyMsg, ProviderUrl, ProviderName, Title, AuthorName, AuthorUrl, ThumbnailUrl, Html, ThumbNailWidth, ThumbNailHeight, OembedType, Version, Url, MeanAlpha, Description, SubType) ->
++       #xmlel{name = <<"message">>,
++           attrs = [{<<"type">>, Type}, {<<"subtype">>, SubType},
++                    {<<"to">>, Recipient}],
++           children = [#xmlel{name = <<"body">>,  
++                        children = [exml:escape_cdata(BodyMsg)]}] ++
++                      [#xmlel{name = <<"oembed">>,
++                        children = [#xmlel{name = <<"provider_url">>,
++                                        children = [exml:escape_cdata(ProviderUrl)]}] ++
++                                    [#xmlel{name = <<"provider_name">>,
++                                        children = [exml:escape_cdata(ProviderName)]}] ++
++                                    [#xmlel{name = <<"title">>,
++                                        children = [exml:escape_cdata(Title)]}] ++
++                                    [#xmlel{name = <<"author_name">>,
++                                        children = [exml:escape_cdata(AuthorName)]}] ++
++                                    [#xmlel{name = <<"author_url">>,
++                                        children = [exml:escape_cdata(AuthorUrl)]}] ++
++                                    [#xmlel{name = <<"thumbnail_url">>,
++                                        children = [exml:escape_cdata(ThumbnailUrl)]}] ++
++                                    [#xmlel{name = <<"html">>,
++                                        children = [exml:escape_cdata(Html)]}] ++
++									[#xmlel{name = <<"thumbnail_width">>,
++                                        children = #xmlcdata{content = integer_to_list(ThumbNailWidth)}}] ++
++                                    [#xmlel{name = <<"thumbnail_height">>,
++                                        children = #xmlcdata{content = integer_to_list(ThumbNailHeight)}}] ++
++									[#xmlel{name = <<"type">>,
++                                        children = [exml:escape_cdata(OembedType)]}] ++
++									[#xmlel{name = <<"version">>,
++                                        children = [exml:escape_cdata(Version)]}] ++
++									[#xmlel{name = <<"url">>,
++                                        children = [exml:escape_cdata(Url)]}] ++
++									[#xmlel{name = <<"mean_alpha">>,
++                                        children = #xmlcdata{content = float_to_list(MeanAlpha)}}] ++
++                                    [#xmlel{name = <<"description">>,
++                                        children = [exml:escape_cdata(Description)]}] 
++                                    }]
++                }.
++
++set_bot_message(Recipient, Type, BodyMsg, Expandbody) ->
++       #xmlel{name = <<"message">>,
++           attrs = [{<<"type">>, Type}, {<<"subtype">>, <<"bot-gitlab">>},
++                    {<<"to">>, Recipient}],
++           children = [#xmlel{name = <<"body">>,
++                        children = [exml:escape_cdata(BodyMsg)]}] ++
++                      [#xmlel{name = <<"expandbody">>,
++                        children = [exml:escape_cdata(Expandbody)]}]}.
++
++set_add_user_message(Recipient, BodyMsg) ->
++       #xmlel{name = <<"message">>,
++           attrs = [{<<"type">>, <<"groupchat">>}, 
++					{<<"subtype">>, <<"welcome">>},
++                    {<<"to">>, Recipient}],
++           children = [#xmlel{name = <<"body">>,
++                        children = [exml:escape_cdata(BodyMsg)]}]}.
++
++
++%% -------------------------
++%% Helper (Muc)
++%% -------------------------
++muc_ns_binary() -> <<"http://jabber.org/protocol/muc">>.
++muc_host() ->    <<"conference.localhost">>.
++host() -> <<"localhost">>.
++
++start_alice_room(Config) ->
++    %% TODO: ensure, that the room's archive is empty
++    RoomName = <<"alicesroom">>,
++    RoomNick = <<"alicesnick">>,
++    [Alice | _] = ?config(escalus_users, Config),
++    start_room(Config, Alice, RoomName, RoomNick, [{persistent, true}]).
++
++start_room(Config, User, Room, Nick, Opts) ->
++    From = generate_rpc_jid(User),
++    rpc_apply(mod_muc, create_instant_room,
++        [<<"localhost">>, Room, From, Nick, Opts]),
++    [{nick, Nick}, {room, Room} | Config].
++
++start_rooms(Config, NumberOfRoom) ->
++	RoomNick = <<"alice">>,
++	[Alice | _] = ?config(escalus_users, Config),
++	RoomList = lists:map(fun(Number) -> 
++						RoomName = list_to_binary("Room" ++ integer_to_list(Number)),
++						KeyRoom = list_to_atom(("room" ++ integer_to_list(Number))),
++						From = generate_rpc_jid(Alice),
++						rpc_apply(mod_muc, create_instant_room,
++							[host, RoomName, From, RoomNick, [{persistent, true}]]),
++						{KeyRoom, RoomName}
++					end, lists:seq(1, NumberOfRoom)),
++	[{nick, RoomNick}, RoomList | Config].	
++
++generate_rpc_jid({_,User}) ->
++    {username, Username} = lists:keyfind(username, 1, User),
++    {server, Server} = lists:keyfind(server, 1, User),
++    {jid, Username, Server, <<"rpc">>, Username, Server, <<"rpc">>}.
++
++stanza_muc_enter_room(Room, Nick) ->
++    Elem = #xmlel{ name = <<"x">>,
++                   attrs=[{<<"xmlns">>, muc_ns_binary()}]},
++    stanza_to_room(escalus_stanza:presence(<<"available">>, [Elem]),
++                   Room, Nick).
++
++stanza_to_room(Stanza, Room) ->
++    escalus_stanza:to(Stanza, room_address(Room)).
++
++stanza_to_room(Stanza, Room, Nick) ->
++    escalus_stanza:to(Stanza, room_address(Room, Nick)).
++
++room_address(Room) when is_binary(Room) ->
++    <<Room/binary, "@", (muc_host())/binary>>.
++
++room_address(Room, Nick) when is_binary(Room), is_binary(Nick) ->
++    <<Room/binary, "@", (muc_host())/binary, "/", Nick/binary>>.
++
++destroy_room(Config) ->
++    RoomName = ?config(room, Config),
++    case rpc_apply(ets, lookup, [muc_online_room, {RoomName, muc_host()}]) of
++        [{_,_,Pid}|_] -> gen_fsm:send_all_state_event(Pid, destroy);
++        _ -> ok
++    end.
++
++destroy_rooms(Config, NumberRoom) ->
++	lists:foreach(fun(Number) -> 
++			KeyRoom = list_to_atom(("room" ++ integer_to_list(Number))),
++			RoomName = ?config(KeyRoom, Config),
++			case rpc_apply(ets, lookup, [muc_online_room, {RoomName, muc_host()}]) of
++				[{_,_,Pid}|_] -> gen_fsm:send_all_state_event(Pid, destroy);
++				_ -> ok
++			end				
++		end, lists:seq(1, NumberRoom)).
++
++nick(User) -> escalus_utils:get_username(User).
++
++nick_to_jid(UserName, Config) when is_atom(UserName) ->
++    UserSpec = escalus_users:get_userspec(Config, UserName),
++    escalus_users:get_jid(Config, UserSpec).
++
++
+diff -ruN ejabberd_tests/tests/mod_11_timeline_SUITE.erl ejabberd_tests_new/tests/mod_11_timeline_SUITE.erl
+--- ejabberd_tests/tests/mod_11_timeline_SUITE.erl	1970-01-01 08:00:00.000000000 +0800
++++ ejabberd_tests_new/tests/mod_11_timeline_SUITE.erl	2015-10-30 17:12:07.486344493 +0700
+@@ -0,0 +1,163 @@
++-module(mod_11_timeline_SUITE).
++
++%% CT callbacks
++-export([all/0,
++         suite/0,
++		 groups/0,
++         init_per_suite/1,
++         end_per_suite/1,
++         init_per_testcase/2,
++         end_per_testcase/2]).
++
++-export([
++		send_normal_message/1
++		, send_message_with_file/1
++        , send_message_with_oembed/1
++        , send_bot_message/1
++		]).
++
++-include_lib("escalus/include/escalus.hrl").
++-include_lib("escalus/include/escalus_xmlns.hrl").
++-include_lib("common_test/include/ct.hrl").
++-include_lib("exml/include/exml_stream.hrl").
++
++-import(message_utils, [set_message_with_file/10,
++						set_message_with_oembed/18,
++						set_bot_message/4,
++						delete_messages/1, 
++						clean_archive/1]).
++
++-define(assert_equal(E, V), (
++    [ct:fail("ASSERT EQUAL~n\tExpected ~p~n\tValue ~p~n", [(E), (V)])
++     || (E) =/= (V)]
++    )).
++
++
++all() ->  [
++		{group, chat_message}
++		].
++
++groups() -> [
++			{chat_message, [sequence], [send_normal_message
++									, send_message_with_file
++									, send_message_with_oembed
++									, send_bot_message
++									]}
++			].
++suite() ->
++    escalus:suite().
++
++init_per_suite(Config) ->
++    NewConfig = escalus:create_users(escalus:init_per_suite(Config)),
++    clean_archive(NewConfig).
++%	escalus:create_users(escalus:init_per_suite(Config)).
++
++end_per_suite(Config) ->
++    clean_archive(Config),
++	Config1 = escalus:delete_users(Config),
++	Selector = [{fromId, <<"alice">>}, {receiveId, <<"bob">>}, {senderId, <<"alice">>}],
++    delete_messages(Selector),
++    escalus:end_per_suite(Config1).
++
++init_per_testcase(CaseName, Config) ->
++     Config1 = escalus:init_per_testcase(CaseName, Config),
++     clean_archive(Config1).
++%	escalus:init_per_testcase(CaseName, Config).
++     
++end_per_testcase(CaseName, Config) ->
++    escalus:end_per_testcase(CaseName, Config).
++
++%%----------------------------------------------
++%% Testcase
++%%----------------------------------------------
++send_normal_message(Config) ->
++    escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++
++        % Alice sends a message to Bob
++        escalus_client:send(Alice, escalus_stanza:chat_to(Bob, <<"Hi!">>)),
++
++        % Bob gets the message
++        escalus_assert:is_chat_message(<<"Hi!">>, escalus_client:wait_for_stanza(Bob)),
++		escalus_assert:is_chat_message(<<"Hi!">>, escalus_client:wait_for_stanza(Alice))
++
++    end).
++
++
++send_message_with_file(Config) ->
++	escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++		% Alice sends a message to Bob
++		% set_message_with_file(Recipient, Type, BodyMsg, FileName, FileSize, FileUrl, MimeType, ThumbnailUrl, ThumbnailWidth, ThumbnailHeight)
++        escalus:send(Alice, set_message_with_file(escalus_utils:get_jid(Bob), 
++												<<"chat">>, 
++												<<"File uploaded: http://s3-ap-southeast-1.amazonaws.com/..">>, 
++												<<"File name">>,
++												1257,
++												<<"http://s3-ap-southeast-1.amazonaws.com/..">>,
++												<<"application/x-shellscript">>,
++												<<"http://gen/zoom/614305409.jpg">>,
++												128, 128)),
++
++        % Bob gets the message
++        escalus_assert:is_chat_message(<<"File uploaded: http://s3-ap-southeast-1.amazonaws.com/..">>, 
++														escalus_client:wait_for_stanza(Bob)),
++        escalus_assert:is_chat_message(<<"File uploaded: http://s3-ap-southeast-1.amazonaws.com/..">>, 
++														escalus_client:wait_for_stanza(Alice))
++
++    end).
++
++send_message_with_oembed(Config) ->
++    escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++        % Alice sends a message to Bob
++        % set_message_with_oembed(Recipient, Type, BodyMsg, ProviderUrl, ProviderName, Title, AuthorName, AuthorUrl, ThumbnailUrl, Html, ThumbNailWidth, ThumbNailHeight, OembedType, Version, Url, MeanAlpha, Description, SubType)
++        escalus:send(Alice, set_message_with_oembed(escalus_utils:get_jid(Bob),
++                                                <<"chat">>,
++                                                <<"http://embed.ly/embed/pricing">>,
++                                                <<"http://embed.ly">>,
++                                                <<"Embedly">>,
++                                                <<"Embed Product Pricing | Embedly">>,
++                                                <<"KhangLe">>,
++                                                <<"http://gen/zoom/614305409.jpg">>,
++                                                <<"http://embed.ly/static/images/logos/logo_color.png?v=4b245">>, 
++												<<"">>,
++                                                399,
++                                                127,
++												<<"link">>,
++												<<"1.0">>,
++												<<"http://embed.ly/embed/pricing">>,
++												32.7480314961,
++												<<"Get started today with Embed. Free for up to 5,000 URLs a month, $19 for up to 50,000 URLs and bulk pricing.">>,
++												<<"">>)),
++
++        % Bob gets the message
++        escalus_assert:is_chat_message(<<"http://embed.ly/embed/pricing">>,
++                                                        escalus_client:wait_for_stanza(Bob)),
++        escalus_assert:is_chat_message(<<"http://embed.ly/embed/pricing">>,
++                                                        escalus_client:wait_for_stanza(Alice))
++
++    end).
++
++send_bot_message(Config) ->
++    escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++        % Alice sends a message to Bob
++        % set_bot_message(Recipient, Type, BodyMsg, Expandbody)
++        escalus:send(Alice, set_bot_message(escalus_utils:get_jid(Bob),
++                                                <<"chat">>,
++                                                <<"[Diaspora:refs/heads/master] 4 new commits by John Smith">>,
++                                                <<"[http://localhost/diaspora/commits/b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327|b6568d]: Update Catalan translation to e38cb41. - Jordi Mallach\n[http://localhost/diaspora/commits/da1560886d4f094c3e6c9ef40349f7d38b5d27d7|da1560]: fixed readme - GitLab dev user\n">>
++                                                )),
++
++        % Bob gets the message
++        escalus_assert:is_chat_message(<<"[Diaspora:refs/heads/master] 4 new commits by John Smith">>,
++                                                        escalus_client:wait_for_stanza(Bob)),
++        escalus_assert:is_chat_message(<<"[Diaspora:refs/heads/master] 4 new commits by John Smith">>,
++                                                        escalus_client:wait_for_stanza(Alice))
++
++    end).
++%%--------------------------------------------
++%% Prepare data for testing
++%%--------------------------------------------
++
++%%---------------------------------------------
++%% Query to get history
++%%---------------------------------------------
++
+diff -ruN ejabberd_tests/tests/mod_grouptimeline_SUITE.erl ejabberd_tests_new/tests/mod_grouptimeline_SUITE.erl
+--- ejabberd_tests/tests/mod_grouptimeline_SUITE.erl	1970-01-01 08:00:00.000000000 +0800
++++ ejabberd_tests_new/tests/mod_grouptimeline_SUITE.erl	2015-10-30 17:12:07.486344493 +0700
+@@ -0,0 +1,266 @@
++-module(mod_grouptimeline_SUITE).
++
++%% CT callbacks
++-export([all/0,
++         suite/0,
++		 groups/0,
++         init_per_suite/1,
++         end_per_suite/1,
++         init_per_testcase/2,
++         end_per_testcase/2]).
++
++-export([
++		send_group_message/1
++		, send_message_with_file/1
++        , send_message_with_oembed/1
++        , send_bot_message/1
++		, send_add_user_message/1
++		]).
++
++-include_lib("escalus/include/escalus.hrl").
++-include_lib("escalus/include/escalus_xmlns.hrl").
++-include_lib("common_test/include/ct.hrl").
++-include_lib("exml/include/exml_stream.hrl").
++
++-import(message_utils, [set_message_with_file/10,
++						set_message_with_oembed/18,
++						set_bot_message/4,
++						set_add_user_message/2,
++						delete_messages/1,
++						start_alice_room/1, 
++						room_address/1,
++						stanza_muc_enter_room/2,
++						nick/1,
++						clean_archive/1,
++						stanza_to_room/2,
++						stanza_to_room/3,
++						destroy_room/1]).
++
++-define(assert_equal(E, V), (
++    [ct:fail("ASSERT EQUAL~n\tExpected ~p~n\tValue ~p~n", [(E), (V)])
++     || (E) =/= (V)]
++    )).
++
++
++all() ->  [
++		{group, chat_message}
++		].
++
++groups() -> [
++			{chat_message, [sequence], [send_group_message
++									, send_message_with_file
++									, send_message_with_oembed
++									, send_bot_message
++									, send_add_user_message
++									]}
++			].
++suite() ->
++    escalus:suite().
++
++init_per_suite(Config) ->
++	escalus:create_users(escalus:init_per_suite(Config)).
++
++end_per_suite(Config) ->
++%	Config1 = escalus:delete_users(Config),
++	Selector = [{fromId, <<"alicesroom">>}, {receiveId, <<"null">>}, {senderId, <<"alice">>}],
++    delete_messages(Selector),
++    escalus:end_per_suite(escalus:delete_users(Config)).
++
++init_per_testcase(CaseName, Config) ->
++	clean_archive(Config),
++	Config1 = escalus:init_per_testcase(CaseName, Config),
++	start_alice_room(Config1).
++     
++end_per_testcase(CaseName, Config) ->
++	destroy_room(Config),
++	clean_archive(Config),
++    escalus:end_per_testcase(CaseName, Config).
++
++%%----------------------------------------------
++%% Testcase
++%%----------------------------------------------
++send_group_message(Config) ->
++	Room = ?config(room, Config),
++    escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++		
++		RoomAddr = room_address(Room),
++
++		escalus:send(Alice, stanza_muc_enter_room(Room, nick(Alice))),
++        escalus:send(Bob, stanza_muc_enter_room(Room, nick(Bob))),
++
++		escalus:wait_for_stanzas(Bob, 5, 5000),
++        escalus:wait_for_stanzas(Alice, 5, 5000),
++		
++        % Alice sends a message to Bob
++        escalus_client:send(Alice, escalus_stanza:groupchat_to(RoomAddr, <<"Hi!">>)),
++
++        % Bob gets the message
++		check_respond(<<"Hi!">>, escalus_client:wait_for_stanza(Bob)),
++		check_respond(<<"Hi!">>, escalus_client:wait_for_stanza(Alice))
++    end).
++
++
++send_message_with_file(Config) ->
++	escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++
++		Room = ?config(room, Config),
++		
++		RoomAddr = room_address(Room),
++
++        escalus:send(Alice, stanza_muc_enter_room(Room, nick(Alice))),
++        escalus:send(Bob, stanza_muc_enter_room(Room, nick(Bob))),
++
++        escalus:wait_for_stanzas(Bob, 5, 5000),
++        escalus:wait_for_stanzas(Alice, 5, 5000),
++
++		% Alice sends a message to Bob
++		% set_message_with_file(Recipient, Type, BodyMsg, FileName, FileSize, FileUrl, MimeType, ThumbnailUrl, ThumbnailWidth, ThumbnailHeight)
++        escalus:send(Alice, stanza_to_room(set_message_with_file(RoomAddr,
++												<<"groupchat">>, 
++												<<"File uploaded: http://s3-ap-southeast-1.amazonaws.com/..">>, 
++												<<"File name">>,
++												1257,
++												<<"http://s3-ap-southeast-1.amazonaws.com/..">>,
++												<<"application/x-shellscript">>,
++												<<"http://gen/zoom/614305409.jpg">>,
++												128, 128), Room)),
++
++        % Bob gets the message
++		MsgBob = escalus_client:wait_for_stanza(Bob),
++		MsgAlice = escalus_client:wait_for_stanza(Alice),
++        check_respond_file(<<"File uploaded: http://s3-ap-southeast-1.amazonaws.com/..">>, MsgBob), 
++        check_respond_file(<<"File uploaded: http://s3-ap-southeast-1.amazonaws.com/..">>, MsgAlice) 
++
++    end).
++
++send_message_with_oembed(Config) ->
++    escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++		Room = ?config(room, Config),
++
++        RoomAddr = room_address(Room),
++
++        escalus:send(Alice, stanza_muc_enter_room(Room, nick(Alice))),
++        escalus:send(Bob, stanza_muc_enter_room(Room, nick(Bob))),
++
++        escalus:wait_for_stanzas(Bob, 5, 5000),
++        escalus:wait_for_stanzas(Alice, 5, 5000),
++
++        % Alice sends a message to Bob
++        % set_message_with_oembed(Recipient, Type, BodyMsg, ProviderUrl, ProviderName, Title, AuthorName, AuthorUrl, ThumbnailUrl, Html, ThumbNailWidth, ThumbNailHeight, OembedType, Version, Url, MeanAlpha, Description, SubType)
++        escalus:send(Alice, stanza_to_room(set_message_with_oembed(RoomAddr,
++                                                <<"groupchat">>,
++                                                <<"http://embed.ly/embed/pricing">>,
++                                                <<"http://embed.ly">>,
++                                                <<"Embedly">>,
++                                                <<"Embed Product Pricing | Embedly">>,
++                                                <<"KhangLe">>,
++                                                <<"http://gen/zoom/614305409.jpg">>,
++                                                <<"http://embed.ly/static/images/logos/logo_color.png?v=4b245">>, 
++												<<"">>,
++                                                399,
++                                                127,
++												<<"link">>,
++												<<"1.0">>,
++												<<"http://embed.ly/embed/pricing">>,
++												32.7480314961,
++												<<"Get started today with Embed. Free for up to 5,000 URLs a month, $19 for up to 50,000 URLs and bulk pricing.">>,
++												<<"">>), Room)),
++		
++        % Bob gets the message
++        MsgBob = escalus_client:wait_for_stanza(Bob),
++        MsgAlice = escalus_client:wait_for_stanza(Alice),
++
++		check_respond_oembed(<<"http://embed.ly/embed/pricing">>, MsgBob),
++        check_respond_oembed(<<"http://embed.ly/embed/pricing">>, MsgAlice)
++
++    end).
++
++send_bot_message(Config) ->
++    escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++		Room = ?config(room, Config),
++
++        RoomAddr = room_address(Room),
++
++        escalus:send(Alice, stanza_muc_enter_room(Room, nick(Alice))),
++        escalus:send(Bob, stanza_muc_enter_room(Room, nick(Bob))),
++
++        escalus:wait_for_stanzas(Bob, 5, 5000),
++        escalus:wait_for_stanzas(Alice, 5, 5000),
++
++        % Alice sends a message to Bob
++        % set_bot_message(Recipient, Type, BodyMsg, Expandbody)
++        escalus:send(Alice, stanza_to_room(set_bot_message(RoomAddr,
++                                                <<"groupchat">>,
++                                                <<"[Diaspora:refs/heads/master] 4 new commits by John Smith">>,
++                                                <<"[http://localhost/diaspora/commits/b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327|b6568d]: Update Catalan translation to e38cb41. - Jordi Mallach\n[http://localhost/diaspora/commits/da1560886d4f094c3e6c9ef40349f7d38b5d27d7|da1560]: fixed readme - GitLab dev user\n">>
++                                                ), Room)),
++
++        % Bob gets the message
++		check_respond_file(<<"[Diaspora:refs/heads/master] 4 new commits by John Smith">>,
++                                                        escalus_client:wait_for_stanza(Bob)),
++        check_respond_file(<<"[Diaspora:refs/heads/master] 4 new commits by John Smith">>,
++                                                        escalus_client:wait_for_stanza(Alice))
++
++    end).
++
++send_add_user_message(Config) ->
++    escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++		Room = ?config(room, Config),
++
++        RoomAddr = room_address(Room),
++
++        escalus:send(Alice, stanza_muc_enter_room(Room, nick(Alice))),
++        escalus:send(Bob, stanza_muc_enter_room(Room, nick(Bob))),
++
++        escalus:wait_for_stanzas(Bob, 5, 5000),
++        escalus:wait_for_stanzas(Alice, 5, 5000),
++
++        % Alice sends a message to Bob
++        % set_bot_message(Recipient, Type, BodyMsg, Expandbody)
++        escalus:send(Alice, stanza_to_room(set_add_user_message(RoomAddr,
++                                                <<"Dung Le has join room">> ), Room)),
++
++        % Bob gets the message
++        check_respond(<<"Dung Le has join room">>,
++                                                        escalus_client:wait_for_stanza(Bob)),
++        check_respond(<<"Dung Le has join room">>,
++                                                        escalus_client:wait_for_stanza(Alice))
++
++    end).
++
++
++check_respond(Msg, Respond) ->
++	#xmlel{children = BodyTag} = Respond,
++	[#xmlel{name = <<"body">>, children = [{xmlcdata, Body}]}] = BodyTag,
++	try
++		?assert_equal(Body, Msg), ok
++	catch Class:Reason ->
++		Stacktrace = erlang:get_stacktrace(),
++        ct:pal("Body: ~p~n", [Body]),
++        erlang:raise(Class, Reason, Stacktrace)
++	end.
++
++check_respond_file(Msg, Respond) ->
++    #xmlel{children = Children} = Respond,
++	[BodyTag | _] = Children,
++    #xmlel{name = <<"body">>, children = [{xmlcdata, Body}]} = BodyTag,
++    try
++        ?assert_equal(Body, Msg), ok
++    catch Class:Reason ->
++        Stacktrace = erlang:get_stacktrace(),
++        ct:pal("Body: ~p~n", [Body]),
++        erlang:raise(Class, Reason, Stacktrace)
++    end.
++
++check_respond_oembed(Msg, Respond) ->
++    #xmlel{children = Children} = Respond,
++    [BodyTag | _] = Children,
++    #xmlel{name = <<"body">>, children = [{xmlcdata, Body}]} = BodyTag,
++    try
++        ?assert_equal(Body, Msg), ok
++    catch Class:Reason ->
++        Stacktrace = erlang:get_stacktrace(),
++        ct:pal("Body: ~p~n", [Body]),
++        erlang:raise(Class, Reason, Stacktrace)
++    end.
++
+diff -ruN ejabberd_tests/tests/mod_muc_SUITE.erl ejabberd_tests_new/tests/mod_muc_SUITE.erl
+--- ejabberd_tests/tests/mod_muc_SUITE.erl	1970-01-01 08:00:00.000000000 +0800
++++ ejabberd_tests_new/tests/mod_muc_SUITE.erl	2015-10-30 17:12:07.486344493 +0700
+@@ -0,0 +1,370 @@
++-module(mod_muc_SUITE).
++
++%% CT
++-export([all/0,
++         suite/0,
++         init_per_suite/1,
++         end_per_suite/1,
++         init_per_testcase/2,
++         end_per_testcase/2]).
++
++-export([create_and_destroy_normal_room/1,
++		 create_and_destroy_default_room/1,
++		 create_and_destroy_default_has_normal_rooms/1,
++		 mediated_invite_normal_room/1,
++		 mediated_invite_default_room/1,
++		 member_invite_to_room/1,
++		 ban_member_normal_room/1,
++		 ban_member_default_room/1
++		]).
++
++-include_lib("escalus/include/escalus.hrl").
++-include_lib("escalus/include/escalus_xmlns.hrl").
++-include_lib("common_test/include/ct.hrl").
++-include_lib("exml/include/exml_stream.hrl").
++
++-import(muc_utils, [is_iq_with_subscription/2,
++                    is_presence_with_role/2,
++                    is_presence_with_status_code/2,
++                    is_presence_with_affiliation/2,
++                    has_status_codes/2, 
++                    is_invitation/1,
++                    stanza_mediated_invitation/2,
++                    stanza_set_affiliations/2,
++                    is_unavailable_presence/2,
++                    is_membership_presence/3,
++                    stanza_destroy_room/1,
++                    was_destroy_presented/1,
++                    was_room_destroyed/1,
++                    was_room_created/1,
++					stanza_create_room/3,
++					stanza_muc_enter_room/2,
++					room_address/2,
++					room_address/1,
++					was_destroy_default/1,
++					is_presence_available/1]).
++
++-define(assert_equal(E, V), (
++    [ct:fail("ASSERT EQUAL~n\tExpected ~p~n\tValue ~p~n", [(E), (V)])
++     || (E) =/= (V)]
++    )).
++
++all() ->
++	[
++		create_and_destroy_normal_room,
++		create_and_destroy_default_room,
++		create_and_destroy_default_has_normal_rooms,
++		mediated_invite_normal_room,
++		mediated_invite_default_room,
++		member_invite_to_room,
++		ban_member_normal_room,
++		ban_member_default_room
++	].
++
++suite() ->
++    escalus:suite().
++
++init_per_suite(Config) ->
++    Config1 = escalus:create_users(escalus:init_per_suite(Config)),
++	[{default_room, <<"63d56f51-a8aa-41d8-87f7-c54863bc1072">>},
++	 {room1, <<"room1-7292-11e5-8355-396137fa66e7_63d56f51-a8aa-41d8-87f7-c54863bc1072">>},
++	 {room2, <<"room2-6696-11e5-99e0-c18ae86f3bad_63d56f51-a8aa-41d8-87f7-c54863bc1072">>}
++		| Config1].
++
++end_per_suite(Config) ->
++    escalus:end_per_suite(escalus:delete_users(Config)).
++
++init_per_testcase(CaseName, Config) ->
++	escalus:init_per_testcase(CaseName, Config).
++
++end_per_testcase(CaseName, Config) ->
++    escalus:end_per_testcase(CaseName, Config).
++
++create_and_destroy_default_room(Config) ->
++	escalus:story(Config, [1], fun(Alice) ->
++		Nick = escalus_users:get_username(Config, alice),
++		RoomId = <<"63d56f51-a8aa-41d8-87f7-c54863bc1072">>,
++		Room1 = stanza_create_room(RoomId, Nick, 1),
++        escalus:send(Alice, Room1),
++        Respond = escalus:wait_for_stanzas(Alice, 10, 5000),
++		check_stanza_create_default_room(Respond, Config),
++
++        DestroyRoom1 = stanza_destroy_room(RoomId),
++        escalus:send(Alice, DestroyRoom1),
++        [PresenceLeaveRoom, Iq] = escalus:wait_for_stanzas(Alice, 10, 5000),
++        was_room_destroyed(Iq),
++        was_destroy_presented(PresenceLeaveRoom)
++    end).
++
++create_and_destroy_normal_room(Config) ->
++	escalus:story(Config, [1], fun(Alice) ->
++		Nick = escalus_users:get_username(Config, alice),
++		RoomId = ?config(room1, Config),
++        Room1 = stanza_create_room(RoomId, Nick, 0),
++        escalus:send(Alice, Room1),
++        [PresenceJoinRoom | _] = escalus:wait_for_stanzas(Alice, 10, 5000),
++		was_room_created(PresenceJoinRoom),
++
++        DestroyRoom1 = stanza_destroy_room(RoomId),
++        escalus:send(Alice, DestroyRoom1),
++        [PresenceLeaveRoom, Iq] = escalus:wait_for_stanzas(Alice, 10, 5000),
++        was_room_destroyed(Iq),
++        was_destroy_presented(PresenceLeaveRoom)
++    end).
++
++create_and_destroy_default_has_normal_rooms(Config) ->
++	escalus:story(Config, [1], fun(Alice) ->
++		Nick = escalus_users:get_username(Config, alice),
++        RoomNormal = ?config(room1, Config),
++		RoomDefault = ?config(default_room, Config),
++		Room1 = stanza_create_room(RoomDefault, Nick, 1),
++        Room2 = stanza_create_room(RoomNormal, Nick, 0),
++		%% send presence to create default room
++        escalus:send(Alice, Room1),
++		check_stanza_create_default_room(escalus:wait_for_stanzas(Alice, 6, 5000), Config),
++		%% send presence to create normal room
++		escalus:send(Alice, Room2),
++		[Presence | _] = escalus:wait_for_stanzas(Alice, 2),
++		was_room_created(Presence),
++
++        DestroyRoom1 = stanza_destroy_room(RoomDefault),
++        escalus:send(Alice, DestroyRoom1),
++        RespondDestroy = escalus:wait_for_stanzas(Alice, 10, 5000),
++		[Destroy1, Destroy2, Iq] = RespondDestroy,
++		
++		was_destroy_presented(Destroy2),
++		was_destroy_default(Destroy1),
++		was_room_destroyed(Iq)
++
++	end).
++
++mediated_invite_normal_room(Config) ->
++    escalus:story(Config, [1, 1], fun(Alice, Bob) ->
++		%% Alice create a new default room
++		AliceNick = escalus_users:get_username(Config, alice),
++		RoomDefault = ?config(room1, Config),
++		Room1 = stanza_create_room(RoomDefault, AliceNick, 0),
++		escalus:send(Alice, Room1),		
++        escalus:wait_for_stanzas(Alice, 10, 5000),
++		
++		%% Alice sends invitation message
++        escalus:send(Alice, stanza_mediated_invitation(RoomDefault, Bob)),
++		is_invitation(escalus:wait_for_stanza(Bob)),
++
++		%% destroy room
++		DestroyRoom1 = stanza_destroy_room(RoomDefault),
++        escalus:send(Alice, DestroyRoom1)
++
++    end).
++
++mediated_invite_default_room(Config) ->
++    escalus:story(Config, [1, 1], fun(Alice, Bob) ->
++		%% Alice create a new default room
++        AliceNick = escalus_users:get_username(Config, alice),
++        RoomDefault = ?config(default_room, Config),
++        Room1 = stanza_create_room(RoomDefault, AliceNick, 1),
++        escalus:send(Alice, Room1),
++        escalus:wait_for_stanzas(Alice, 10, 5000),
++
++        %% Alice sends invitation message
++        escalus:send(Alice, stanza_mediated_invitation(RoomDefault, Bob)),
++        %%is_invitation(escalus:wait_for_stanza(Bob)),
++        RespondBob = escalus:wait_for_stanzas(Bob, 10, 5000),
++		[IQ, Presence] = escalus:wait_for_stanzas(Alice, 2),
++		true = is_iq_with_subscription(IQ, <<"both">>),		
++		true = is_presence_available(Presence),
++
++		%% destroy room
++		DestroyRoom1 = stanza_destroy_room(RoomDefault),
++        escalus:send(Alice, DestroyRoom1)
++
++    end).
++
++%%  ejabberd returns cancel/not-allowed error while it should return auth/forbidden according to XEP
++member_invite_to_room(Config) ->
++    escalus:story(Config, [1, 1, 1], fun(Alice, Bob, Carol) ->
++        %% Send invitation to Bob in order to make Bob become a member
++		AliceNick = escalus_users:get_username(Config, alice),
++        RoomDefault = ?config(default_room, Config),
++        Room1 = stanza_create_room(RoomDefault, AliceNick, 1),
++        escalus:send(Alice, Room1),
++        escalus:wait_for_stanzas(Alice, 10, 5000),		
++		escalus:send(Alice, stanza_mediated_invitation(RoomDefault, Bob)),
++
++        %% Bob gets an invitation
++        escalus:wait_for_stanzas(Bob, 10, 5000),
++
++        %% Bob joins room
++		BobNick = escalus_users:get_username(Config, bob),
++        escalus:send(Bob, stanza_muc_enter_room(RoomDefault, BobNick)),
++        escalus:wait_for_stanzas(Bob, 10, 5000),
++
++        %% Bob tries to invite Kate
++        escalus:send(Bob, stanza_mediated_invitation(RoomDefault, Carol)),
++
++        %% He should receive an error
++        Error = escalus:wait_for_stanza(Bob),
++        escalus:assert(is_error, [<<"auth">>, <<"forbidden">>], Error),
++        escalus:assert(is_stanza_from, [room_address(RoomDefault)], Error),
++
++		%% destroy room
++        DestroyRoom1 = stanza_destroy_room(RoomDefault),
++        escalus:send(Alice, DestroyRoom1)
++    end).
++
++ban_member_normal_room(Config) ->
++	escalus:story(Config, [1, 1, 1], fun(Alice, Bob, Carol) ->
++        %% Alice create a new default room
++        AliceNick = escalus_users:get_username(Config, alice),
++        RoomNormal = ?config(room1, Config),
++        Room1 = stanza_create_room(RoomNormal, AliceNick, 0),
++        escalus:send(Alice, Room1),
++        escalus:wait_for_stanzas(Alice, 2),
++
++        %% Alice sends invitation message
++        escalus:send(Alice, stanza_mediated_invitation(RoomNormal, Bob)),
++        escalus:wait_for_stanza(Bob),
++        %% Bob joins room
++		BobNick = escalus_users:get_username(Config, bob),
++        escalus:send(Bob, stanza_muc_enter_room(RoomNormal, BobNick)),
++        escalus:wait_for_stanzas(Bob, 2),
++
++		%% Alice invites Carol to room
++		escalus:send(Alice, stanza_mediated_invitation(RoomNormal, Carol)),		
++		escalus:wait_for_stanza(Carol),
++
++		%% Carol joins room
++		CarolNick = escalus_users:get_username(Config, carol),
++        escalus:send(Carol, stanza_muc_enter_room(RoomNormal, CarolNick)),
++        escalus:wait_for_stanzas(Carol, 2),
++
++		%% Alice remove Bob from room1
++        escalus:send(Alice, stanza_set_affiliations(RoomNormal,
++                [{escalus_utils:get_short_jid(Bob), <<"none">>}])),
++		
++		%% check respond
++		[PresenceA, IQ] = escalus:wait_for_stanzas(Alice, 2),
++		PresenceB = escalus:wait_for_stanza(Bob),
++		PresenceC = escalus:wait_for_stanza(Carol),
++		true = escalus_pred:is_iq_result(IQ),
++		true = check_presence_unavailable(PresenceA),
++		true = check_presence_unavailable(PresenceB),
++		true = check_presence_unavailable(PresenceC),
++	
++		%% destroy room
++        DestroyRoom1 = stanza_destroy_room(RoomNormal),
++        escalus:send(Alice, DestroyRoom1)
++
++    end).
++
++ban_member_default_room(Config) ->
++    escalus:story(Config, [1, 1, 1], fun(Alice, Bob, Carol) ->
++        %% Alice create a new default room
++        AliceNick = escalus_users:get_username(Config, alice),
++        RoomDefault = ?config(default_room, Config),
++        Room1 = stanza_create_room(RoomDefault, AliceNick, 1),
++        escalus:send(Alice, Room1),
++        escalus:wait_for_stanzas(Alice, 5),
++
++        %% Alice sends invitation message
++        escalus:send(Alice, stanza_mediated_invitation(RoomDefault, Bob)),
++        escalus:wait_for_stanzas(Alice, 10, 5000),
++		escalus:wait_for_stanzas(Bob, 10, 5000),
++		%% Bob joins room
++		BobNick = escalus_users:get_username(Config, bob),
++        escalus:send(Bob, stanza_muc_enter_room(RoomDefault, BobNick)),
++        escalus:wait_for_stanzas(Bob, 2),
++    
++		%% Alice invites Carol to room
++		CarolNick = escalus_users:get_username(Config, carol),
++        escalus:send(Alice, stanza_mediated_invitation(RoomDefault, Carol)),
++		escalus:wait_for_stanzas(Alice, 10, 5000),
++        escalus:wait_for_stanzas(Bob, 10, 5000),
++        escalus:wait_for_stanzas(Carol, 10, 5000),
++	
++		%% Carol joins room
++        escalus:send(Carol, stanza_muc_enter_room(RoomDefault, CarolNick)),
++        escalus:wait_for_stanzas(Carol, 2),
++
++        %% Alice remove Bob from room1
++        escalus:send(Alice, stanza_set_affiliations(RoomDefault,
++                [{escalus_utils:get_short_jid(Bob), <<"none">>}])),
++
++        %% check respond
++        RespondA = escalus:wait_for_stanzas(Alice, 10, 5000),
++        RespondB = escalus:wait_for_stanzas(Bob, 10, 5000),
++		RespondC = escalus:wait_for_stanzas(Carol, 10, 5000),
++		true = check_stanza_leave_room(RespondA, RoomDefault, BobNick),
++		true = check_stanza_leave_room(RespondB, RoomDefault, BobNick),
++		true = check_stanza_leave_room(RespondC, RoomDefault, BobNick),
++
++		%% destroy room
++        DestroyRoom1 = stanza_destroy_room(RoomDefault),
++        escalus:send(Alice, DestroyRoom1)
++
++    end).
++
++%% -------------------------------------------------
++%%  Check respond
++%% -------------------------------------------------
++check_stanza_create_default_room(Stanzas, Config) ->
++	AliceNick = escalus_users:get_username(Config, alice),
++    Results = lists:map(fun(Stanza) ->
++                case Stanza of
++                    #xmlel{name = <<"presence">>} ->
++                        is_presence_with_role(Stanza, <<"moderator">>) andalso
++                        has_status_codes(Stanza, [<<"201">>, <<"110">>]) andalso
++                        is_presence_with_affiliation(Stanza, <<"owner">>) andalso
++                        escalus_pred:is_stanza_from(
++                            room_address(?config(default_room, Config), AliceNick), Stanza);
++                    #xmlel{name = <<"iq">>} ->
++                        case escalus_pred:is_iq_result(Stanza) of
++                            true -> true;
++                            false ->
++                                case is_iq_with_subscription(Stanza, <<"both">>) of
++                                    true -> true;
++                                    false -> false
++                                end
++                        end;
++                    #xmlel{name = <<"message">>} ->
++                        true = escalus_pred:is_stanza_from(
++                            room_address(?config(default_room, Config)), Stanza);
++                    _ -> false
++                end
++            end, Stanzas),
++    lists:all(fun(R) -> R == true end, Results).
++
++check_presence_unavailable(Stanza) ->
++	is_membership_presence(Stanza, <<"none">>, <<"none">>) andalso
++	is_unavailable_presence(Stanza, <<"321">>).
++
++check_stanza_leave_room(Stanzas, Room, Nick) ->
++    Results = lists:map(fun(Stanza) ->
++                case Stanza of
++                    #xmlel{name = <<"presence">>, attrs = Attr} ->
++                            case escalus_pred:is_stanza_from(
++                                room_address(Room, Nick), Stanza) of
++                                    true ->
++                                        is_membership_presence(Stanza, <<"none">>, <<"none">>) andalso
++                                        is_unavailable_presence(Stanza, <<"321">>);
++                                    false ->
++                                        case proplists:get_value(<<"type">>, Attr) of
++                                            <<"unavailable">> -> true;
++                                            _ -> false
++                                        end
++                            end;
++                    #xmlel{name = <<"iq">>} ->
++                            case escalus_pred:is_iq_result(Stanza) of
++                                true -> true;
++                                false ->
++                                    case is_iq_with_subscription(Stanza, <<"remove">>) of
++                                        true -> true;
++                                        false -> false
++                                    end
++                            end;
++                    _ -> false
++                end
++            end, Stanzas),
++    lists:all(fun(R) -> R == true end, Results).
++
++
+diff -ruN ejabberd_tests/tests/mod_presence_update_SUITE.erl ejabberd_tests_new/tests/mod_presence_update_SUITE.erl
+--- ejabberd_tests/tests/mod_presence_update_SUITE.erl	1970-01-01 08:00:00.000000000 +0800
++++ ejabberd_tests_new/tests/mod_presence_update_SUITE.erl	2015-10-30 17:12:07.486344493 +0700
+@@ -0,0 +1,573 @@
++-module(mod_presence_update_SUITE).
++
++%% CT callbacks
++-export([all/0,
++         suite/0,
++         groups/0,
++         init_per_suite/1,
++         end_per_suite/1,
++         init_per_testcase/2,
++         end_per_testcase/2]).
++
++-export([
++        send_presence_update/1,
++		remove_user_one_room/1,
++		remove_user_many_rooms_1/1,
++		remove_user_many_rooms_2/1,
++		destroy_room_user_join_one_room/1,
++		destroy_room_user_join_rooms_1/1,
++		destroy_room_user_join_rooms_2/1
++        ]).
++
++-include_lib("escalus/include/escalus.hrl").
++-include_lib("escalus/include/escalus_xmlns.hrl").
++-include_lib("common_test/include/ct.hrl").
++-include_lib("exml/include/exml_stream.hrl").
++
++-import(message_utils, [
++                        start_alice_room/1,
++                        room_address/1,
++						room_address/2,
++                        stanza_muc_enter_room/2,
++                        nick/1,
++						nick_to_jid/2,
++                        clean_archive/1,
++                        stanza_to_room/2,
++                        stanza_to_room/3,
++                        destroy_room/1,
++						start_rooms/2,
++						destroy_rooms/2]).
++
++-import(muc_utils, [is_iq_with_subscription/2,
++					is_presence_with_role/2,
++				    is_presence_with_status_code/2,
++		            is_presence_with_affiliation/2,
++					has_status_codes/2,
++					is_invitation/1,
++					stanza_mediated_invitation/2,
++					stanza_set_affiliations/2,
++					is_unavailable_presence/2,
++			        is_membership_presence/3,
++					stanza_destroy_room/1,
++			        was_destroy_presented/1,
++			        was_room_destroyed/1,
++			        was_room_created/1]).
++
++-define(assert_equal(E, V), (
++    [ct:fail("ASSERT EQUAL~n\tExpected ~p~n\tValue ~p~n", [(E), (V)])
++     || (E) =/= (V)]
++    )).
++
++
++all() ->  [
++        {group, presence_update},
++		{group, presence_remove},
++		{group, presence_destroy_room}
++        ].
++
++groups() -> [
++            {presence_update, [sequence], [send_presence_update]},
++            {presence_remove, [sequence], [remove_user_many_rooms_1,	%% some roster who is in room joins another rooms with user
++											remove_user_many_rooms_2,	%% all rosters who is in room join another rooms with user
++											remove_user_one_room]},		%% user joins only room
++			{presence_destroy_room, [sequence], 
++										[destroy_room_user_join_one_room,	%% userA and userB only join room1
++										destroy_room_user_join_rooms_1,
++										destroy_room_user_join_rooms_2]}	%% userA, userB, UserC join room1; userA and userB join room2
++            ].
++suite() ->
++    escalus:suite().
++
++init_per_suite(Config) ->
++    escalus:create_users(escalus:init_per_suite(Config)).
++
++end_per_suite(Config) ->
++    escalus:end_per_suite(escalus:delete_users(Config)).
++
++init_per_testcase(CaseName = remove_user_one_room, Config) ->
++	clean_archive(Config),
++	Config1 = escalus:init_per_testcase(CaseName, Config),
++	[{num_room, 3}, {room1, <<"room1">>}, {room2, <<"room2">>}, {room3, <<"room3">>} | Config1];
++
++init_per_testcase(CaseName = remove_user_many_rooms_1, Config) ->
++    clean_archive(Config),
++    Config1 = escalus:init_per_testcase(CaseName, Config),
++    [{num_room, 3}, {room1, <<"room1">>}, {room2, <<"room2">>}, {room3, <<"room3">>} | Config1];
++
++init_per_testcase(CaseName = remove_user_many_rooms_2, Config) ->
++    clean_archive(Config),
++    Config1 = escalus:init_per_testcase(CaseName, Config),
++    [{num_room, 3}, {room1, <<"room1">>}, {room2, <<"room2">>}, {room3, <<"room3">>} | Config1];
++
++init_per_testcase(CaseName = destroy_room_user_join_one_room, Config) ->
++    clean_archive(Config),
++    Config1 = escalus:init_per_testcase(CaseName, Config),
++    [{num_room, 1}, {room1, <<"room1">>} | Config1];
++
++init_per_testcase(CaseName = destroy_room_user_join_rooms_1, Config) ->
++    clean_archive(Config),
++    Config1 = escalus:init_per_testcase(CaseName, Config),
++    [{num_room, 2}, {room1, <<"room1">>}, {room2, <<"room2">>}| Config1];
++
++init_per_testcase(CaseName = destroy_room_user_join_rooms_2, Config) ->
++    clean_archive(Config),
++    Config1 = escalus:init_per_testcase(CaseName, Config),
++    [{num_room, 2}, {room1, <<"room1">>}, {room2, <<"room2">>}| Config1];
++
++init_per_testcase(CaseName, Config) ->
++    clean_archive(Config),
++    Config1 = escalus:init_per_testcase(CaseName, Config),
++	start_room(Config1).
++
++end_per_testcase(CaseName = remove_user_one_room, Config) ->
++	clean_archive(Config),
++	destroy_rooms(Config, ?config(num_room, Config)),
++	escalus:end_per_testcase(CaseName, Config);
++
++end_per_testcase(CaseName = remove_user_many_rooms_1, Config) ->
++    clean_archive(Config),
++    destroy_rooms(Config, ?config(num_room, Config)),
++    escalus:end_per_testcase(CaseName, Config);
++
++end_per_testcase(CaseName = remove_user_many_rooms_2, Config) ->
++    clean_archive(Config),
++    destroy_rooms(Config, ?config(num_room, Config)),
++    escalus:end_per_testcase(CaseName, Config);
++
++end_per_testcase(CaseName = destroy_room_user_join_one_room, Config) ->
++    clean_archive(Config),
++    destroy_rooms(Config, ?config(num_room, Config)),
++    escalus:end_per_testcase(CaseName, Config);
++
++end_per_testcase(CaseName = destroy_room_user_join_rooms_1, Config) ->
++    clean_archive(Config),
++    destroy_rooms(Config, ?config(num_room, Config)),
++    escalus:end_per_testcase(CaseName, Config);
++
++end_per_testcase(CaseName = destroy_room_user_join_rooms_2, Config) ->
++    clean_archive(Config),
++    destroy_rooms(Config, ?config(num_room, Config)),
++    escalus:end_per_testcase(CaseName, Config);
++
++end_per_testcase(CaseName, Config) ->
++	clean_archive(Config),
++    destroy_room(Config),
++    escalus:end_per_testcase(CaseName, Config).
++
++start_room(Config) ->
++	[{nick, <<"alice">>}, {room, <<"alicesroom">>} | Config].
++
++send_presence_update(Config) ->
++    Room = ?config(room, Config),
++    escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++
++        RoomAddr = room_address(Room),
++
++		%% Alice joins room
++        escalus:send(Alice, stanza_muc_enter_room(Room, nick(Alice))),
++        ResJoinRoomAlice = escalus:wait_for_stanzas(Alice, 5, 5000),
++		%% check content of stanza when Alice join and create room
++		true = check_respond_create_room(ResJoinRoomAlice, Config),		
++
++		%Alice sends invitations
++        %invitations should include contiue flag, but this makes no sense without the thread
++        escalus:send(Alice, stanza_mediated_invitation(Room, Bob)),
++		MsgInviteAlice = escalus:wait_for_stanzas(Alice, 2),
++		MsgInviteBob = escalus:wait_for_stanzas(Bob, 4),		
++		%% check respond when Alice invite Bob to room  
++        true = check_respond_admin_invite(MsgInviteAlice),
++		true = check_respond_user_invited(MsgInviteBob, Config),
++
++		%% Bob joins room
++        escalus:send(Bob, stanza_muc_enter_room(Room, nick(Bob))),
++        PresenceRoomBob = escalus:wait_for_stanzas(Bob, 2),
++		escalus_assert:has_no_stanzas(Alice),
++		true = check_presence_join_room(PresenceRoomBob, Config)
++
++    end).
++
++remove_user_many_rooms_1(Config) ->
++	UserInfo = [{alice, 1}, {bob, 1}, {carol, 1}, {kate, 1}, {mike, 1}],
++    escalus:story(Config, UserInfo,
++        fun(Alice, Bob, Carol, Kate, Mike) ->
++			
++			init_rooms(Config, Alice, Bob, Carol, Kate, Mike),
++			Room = ?config(room1,Config),
++			%% Alice remove Bob from room1
++	        escalus:send(Alice, stanza_set_affiliations(Room, 
++									[{escalus_utils:get_short_jid(Bob), <<"none">>}])),
++			%% Respond of all members
++			true = check_respond_leave_room(escalus:wait_for_stanzas(Alice, 2), Room, nick(Bob)),
++			true = check_respond_leave_room(escalus:wait_for_stanzas(Bob, 3), Room, nick(Bob)),
++			RespondCarol = escalus:wait_for_stanza(Carol),
++			true = check_respond_leave_room([RespondCarol], Room, nick(Bob)),
++			true = check_respond_leave_room(escalus:wait_for_stanzas(Kate, 3), Room, nick(Bob)),
++			escalus_assert:has_no_stanzas(Mike)
++    end).
++
++remove_user_one_room(Config) ->
++    UserInfo = [{alice, 1}, {bob, 1}, {carol, 1}, {kate, 1}, {mike, 1}],
++    escalus:story(Config, UserInfo,
++        fun(Alice, Bob, Carol, Kate, Mike) ->
++
++            init_rooms(Config, Alice, Bob, Carol, Kate, Mike),
++            %% Alice remove Mike from room3
++			Room = ?config(room3,Config),
++            escalus:send(Alice, stanza_set_affiliations( Room,
++                                    [{escalus_utils:get_short_jid(Mike), <<"none">>}])),
++            %% Respond of all members
++            true = check_respond_leave_room(escalus:wait_for_stanzas(Alice, 4), Room, nick(Mike)),
++            true = check_respond_leave_room(escalus:wait_for_stanzas(Bob, 3), Room, nick(Mike)),
++			escalus_assert:has_no_stanzas(Carol),
++			escalus_assert:has_no_stanzas(Kate),
++            true = check_respond_leave_room(escalus:wait_for_stanzas(Mike, 5), Room, nick(Mike))
++    end).
++
++remove_user_many_rooms_2(Config) ->
++    UserInfo = [{alice, 1}, {bob, 1}, {carol, 1}, {kate, 1}, {mike, 1}],
++    escalus:story(Config, UserInfo,
++        fun(Alice, Bob, Carol, Kate, Mike) ->
++
++            init_rooms(Config, Alice, Bob, Carol, Kate, Mike),
++            %% Alice remove Carol from room2
++			Room = ?config(room2,Config),
++            escalus:send(Alice, stanza_set_affiliations(Room,
++                                    [{escalus_utils:get_short_jid(Carol), <<"none">>}])),
++            %% Respond of all members
++            true = check_respond_leave_room(escalus:wait_for_stanzas(Alice, 2), Room, nick(Alice)),
++            RespondBob = escalus:wait_for_stanza(Bob),
++			true = check_respond_leave_room([RespondBob], Room, nick(Alice)),
++            RespondCarol = escalus:wait_for_stanza(Carol),
++			true = check_respond_leave_room([RespondCarol], Room, nick(Alice)),
++            escalus_assert:has_no_stanzas(Kate),
++            escalus_assert:has_no_stanzas(Mike)
++    end).
++
++destroy_room_user_join_rooms_1(Config) ->
++	UserInfo = [{alice, 1}, {bob, 1}, {carol, 1}],
++    escalus:story(Config, UserInfo,fun(Alice, Bob, Carol) ->
++		%% init room
++		%% Room1: {alice, bob, carol}
++		%% Room2: {alice, bob}
++		init_room_destroy_testcase(Config, Alice, Bob, Carol),
++
++		%% Alice destroy room2
++		DestroyRoom1 = stanza_destroy_room(<<"room1">>),
++        escalus:send(Alice, DestroyRoom1),	
++
++		%% Respond of all members
++		escalus:wait_for_stanzas(Alice, 6),
++		escalus:wait_for_stanzas(Bob, 7),
++		escalus:wait_for_stanzas(Carol, 9)
++    end).
++
++destroy_room_user_join_rooms_2(Config) ->
++    UserInfo = [{alice, 1}, {bob, 1}, {carol, 1}],
++    escalus:story(Config, UserInfo,fun(Alice, Bob, Carol) ->
++        %% init room
++        %% Room1: {alice, bob, carol}
++        %% Room2: {alice, bob}
++        init_room_destroy_testcase(Config, Alice, Bob, Carol),
++
++        %% Alice destroy room2
++        DestroyRoom1 = stanza_destroy_room(<<"room2">>),
++        escalus:send(Alice, DestroyRoom1),
++
++        %% Respond of all members
++        escalus:wait_for_stanzas(Alice, 6),
++        escalus:wait_for_stanzas(Bob, 7),
++        escalus_assert:has_no_stanzas(Carol)
++    end).
++
++destroy_room_user_join_one_room(Config) ->
++    UserInfo = [{alice, 1}, {bob, 1}, {carol, 1}],
++    escalus:story(Config, UserInfo,fun(Alice, Bob, Carol) ->
++        %% init room
++        %% Room1: {alice, bob}
++        Room1 = ?config(room1, Config),
++		%% Alice joins room
++	    escalus:send(Alice, stanza_muc_enter_room(Room1, nick(Alice))),
++	    escalus:wait_for_stanzas(Alice, 5),
++
++		%Alice sends invitations
++	    %% invite Bob
++		escalus:send(Alice, stanza_mediated_invitation(Room1, Bob)),
++	    escalus:wait_for_stanzas(Alice, 2),
++		escalus:wait_for_stanzas(Bob, 4),
++		
++		%% Bob joins room
++		escalus:send(Bob, stanza_muc_enter_room(Room1, nick(Bob))),
++	    escalus:wait_for_stanzas(Bob, 2),
++
++        %% Alice destroy room
++        DestroyRoom1 = stanza_destroy_room(<<"room1">>),
++        escalus:send(Alice, DestroyRoom1),
++
++        %% Respond of all members
++        escalus:wait_for_stanzas(Alice, 5),
++        escalus:wait_for_stanzas(Bob, 6),
++        escalus_assert:has_no_stanzas(Carol)
++    end).
++
++
++%% ---------------------------------------------
++%% Init test case
++%% ---------------------------------------------
++%% this function was used to create 3 rooms to test for group presence_remove
++init_rooms(Config, Alice, Bob, Carol, Kate, Mike) ->
++	%% start 3 rooms: Room1, Room2, Room3
++	%% join room and invite user to room
++    %% Room1 = {alice, bob, carol, kate}
++	%% Room2 = {alice, bob, carol}
++    %% Room3 = {alice, bob, mike}
++	%% Room1
++	Room1 = ?config(room1, Config),
++	%% Alice joins room
++	escalus:send(Alice, stanza_muc_enter_room(Room1, nick(Alice))),
++	escalus:wait_for_stanzas(Alice, 5),
++
++	%Alice sends invitations
++	%% invite Bob
++	escalus:send(Alice, stanza_mediated_invitation(Room1, Bob)),
++	escalus:wait_for_stanzas(Alice, 2),
++	escalus:wait_for_stanzas(Bob, 4),
++
++	%% invite Carol
++	escalus:send(Alice, stanza_mediated_invitation(Room1, Carol)),
++	escalus:wait_for_stanzas(Alice, 2),
++	escalus:wait_for_stanzas(Bob, 2),
++	escalus:wait_for_stanzas(Carol, 6),
++
++	%%invite Kate
++	escalus:send(Alice, stanza_mediated_invitation(Room1, Kate)),
++	escalus:wait_for_stanzas(Alice, 2),
++	escalus:wait_for_stanzas(Bob, 2),
++	escalus:wait_for_stanzas(Carol, 2),
++	escalus:wait_for_stanzas(Kate, 8),
++	
++	%% Room2
++	Room2 = ?config(room2, Config),
++	%% Alice joins room
++	escalus:send(Alice, stanza_muc_enter_room(Room2, nick(Alice))),
++	escalus:wait_for_stanzas(Alice, 5),
++
++	%Alice sends invitations
++	%% invite Bob
++	escalus:send(Alice, stanza_mediated_invitation(Room2, Bob)),
++	escalus:wait_for_stanzas(Alice, 2),
++	escalus:wait_for_stanzas(Bob, 4),
++
++	%% invite Carol
++	escalus:send(Alice, stanza_mediated_invitation(Room2, Carol)),
++	escalus:wait_for_stanzas(Alice, 2),
++	escalus:wait_for_stanzas(Bob, 2),
++	escalus:wait_for_stanzas(Carol, 6),
++
++	%% Room3
++	Room3 = ?config(room3, Config),
++
++	%% Alice joins room
++	escalus:send(Alice, stanza_muc_enter_room(Room3, nick(Alice))),
++	escalus:wait_for_stanzas(Alice, 5),
++
++	%Alice sends invitations
++	%% invite Bob
++	escalus:send(Alice, stanza_mediated_invitation(Room3, Bob)),
++	escalus:wait_for_stanzas(Alice, 2),
++	escalus:wait_for_stanzas(Bob, 4),
++
++	%% invite Mike
++	escalus:send(Alice, stanza_mediated_invitation(Room3, Mike)),
++	escalus:wait_for_stanzas(Alice, 2),
++	escalus:wait_for_stanzas(Bob, 2),
++	escalus:wait_for_stanzas(Mike, 6),
++
++	%% all members join room1
++	escalus:send(Bob, stanza_muc_enter_room(Room1, nick(Bob))),
++	escalus:wait_for_stanzas(Bob, 2),
++	escalus:send(Carol, stanza_muc_enter_room(Room1, nick(Carol))),
++	escalus:wait_for_stanzas(Carol, 2),
++	escalus:send(Kate, stanza_muc_enter_room(Room1, nick(Kate))),
++	escalus:wait_for_stanzas(Kate, 2),
++
++	%% all members join room2
++	escalus:send(Bob, stanza_muc_enter_room(Room2, nick(Bob))),
++	escalus:wait_for_stanzas(Bob, 2),
++	escalus:send(Carol, stanza_muc_enter_room(Room2, nick(Carol))),
++	escalus:wait_for_stanzas(Carol, 2),
++
++	%% all members join room3
++	escalus:send(Bob, stanza_muc_enter_room(Room3, nick(Bob))),
++	escalus:wait_for_stanzas(Bob, 2),
++	escalus:send(Mike, stanza_muc_enter_room(Room3, nick(Mike))),
++	escalus:wait_for_stanzas(Mike, 2).
++
++%% this function is used to group testcase destroy room
++%% Room1 = {alice, bob, carol}
++%% Room2 = {alice, bob}
++init_room_destroy_testcase(Config, Alice, Bob, Carol) ->
++
++    Room1 = ?config(room1, Config),
++    %% Alice joins room
++    escalus:send(Alice, stanza_muc_enter_room(Room1, nick(Alice))),
++    escalus:wait_for_stanzas(Alice, 5),
++
++    %Alice sends invitations
++    %% invite Bob
++    escalus:send(Alice, stanza_mediated_invitation(Room1, Bob)),
++    escalus:wait_for_stanzas(Alice, 2),
++    escalus:wait_for_stanzas(Bob, 4),
++
++    %% invite Carol
++    escalus:send(Alice, stanza_mediated_invitation(Room1, Carol)),
++    escalus:wait_for_stanzas(Alice, 2),
++    escalus:wait_for_stanzas(Bob, 2),
++    escalus:wait_for_stanzas(Carol, 6),
++
++    %% Room2
++    Room2 = ?config(room2, Config),
++    %% Alice joins room
++    escalus:send(Alice, stanza_muc_enter_room(Room2, nick(Alice))),
++    escalus:wait_for_stanzas(Alice, 5),
++
++    %Alice sends invitations
++    %% invite Bob
++    escalus:send(Alice, stanza_mediated_invitation(Room2, Bob)),
++    escalus:wait_for_stanzas(Alice, 2),
++    escalus:wait_for_stanzas(Bob, 4),
++
++    %% all members join room1
++    escalus:send(Bob, stanza_muc_enter_room(Room1, nick(Bob))),
++    escalus:wait_for_stanzas(Bob, 2),
++    escalus:send(Carol, stanza_muc_enter_room(Room1, nick(Carol))),
++    escalus:wait_for_stanzas(Carol, 2),
++
++    %% all members join room2
++    escalus:send(Bob, stanza_muc_enter_room(Room2, nick(Bob))),
++    escalus:wait_for_stanzas(Bob, 2).
++
++%% ---------------------------------------------
++%% Testcase 01
++%% ---------------------------------------------
++check_respond_create_room(Stanzas, Config) ->
++	Results = lists:map(fun(Stanza) ->
++				case Stanza of
++					#xmlel{name = <<"presence">>} ->
++						is_presence_with_role(Stanza, <<"moderator">>) andalso
++						has_status_codes(Stanza, [<<"201">>, <<"110">>]) andalso
++						is_presence_with_affiliation(Stanza, <<"owner">>) andalso
++						escalus_pred:is_stanza_from(
++							room_address(?config(room, Config), <<"alice">>), Stanza);
++					#xmlel{name = <<"iq">>} ->
++						case escalus_pred:is_iq_result(Stanza) of
++							true -> true;
++							false -> 
++								case is_iq_with_subscription(Stanza, <<"both">>) of
++									true -> true;
++									false -> false
++								end
++						end;
++					#xmlel{name = <<"message">>} ->
++						true = escalus_pred:is_stanza_from(
++							room_address(?config(room, Config)), Stanza);
++					_ -> false
++				end
++			end, Stanzas),
++	lists:all(fun(R) -> R == true end, Results).
++
++check_respond_admin_invite(Stanzas) ->	
++	Results = lists:map(fun(Stanza) -> 
++				case Stanza of
++					#xmlel{name = <<"iq">>}	->
++						case is_iq_with_subscription(Stanza, <<"both">>) of
++							true -> true;
++							false -> false
++						end;
++					#xmlel{name = <<"presence">>, children = Children} ->
++						case Children of
++							[] -> true;
++							_ -> false
++						end;
++					_ -> false
++				end
++			end, Stanzas),
++	lists:all(fun(R) -> R == true end, Results).
++
++check_respond_user_invited(Stanzas, Config) ->
++	Results = lists:map(fun(Stanza) ->
++                case Stanza of
++					#xmlel{name = <<"presence">>, children = Children} ->
++                        case Children of
++                            [] -> true;
++                            _ -> false
++                        end;
++                    #xmlel{name = <<"iq">>} ->
++						is_iq_with_subscription(Stanza, <<"both">>) andalso
++						(escalus_pred:is_stanza_from(nick_to_jid(alice, Config), Stanza) or
++						escalus_pred:is_stanza_from(nick_to_jid(bob, Config), Stanza));
++                    #xmlel{name = <<"message">>} ->
++						is_invitation(Stanza) andalso
++                        escalus_pred:is_stanza_from(
++                            room_address(?config(room, Config)), Stanza);
++                    _ -> false
++                end
++            end, Stanzas),
++    lists:all(fun(R) -> R == true end, Results).
++
++check_presence_join_room(Stanzas, Config) ->
++	Results = lists:map(fun(Stanza) ->
++                case Stanza of
++                    #xmlel{name = <<"presence">>} ->
++						case escalus_pred:is_stanza_from(
++                            room_address(?config(room, Config), <<"bob">>), Stanza) of
++								true ->
++								    is_presence_with_role(Stanza, <<"participant">>) andalso
++									has_status_codes(Stanza, [<<"110">>]) andalso
++							        is_presence_with_affiliation(Stanza, <<"member">>);
++								false ->
++									is_presence_with_role(Stanza, <<"moderator">>) andalso
++						            is_presence_with_affiliation(Stanza, <<"owner">>) andalso
++									escalus_pred:is_stanza_from(
++			                            room_address(?config(room, Config), <<"alice">>), Stanza)
++						end;	
++                    #xmlel{name = <<"message">>} ->
++                        true = escalus_pred:is_stanza_from(
++                            room_address(?config(room, Config)), Stanza);
++                    _ -> false
++                end
++            end, Stanzas),
++    lists:all(fun(R) -> R == true end, Results).
++
++%% ---------------------------------------------------
++%% Testcase 02 -> 04
++%% ---------------------------------------------------
++check_respond_leave_room(Stanzas, Room, Nick) ->
++    Results = lists:map(fun(Stanza) ->
++				case Stanza of
++					#xmlel{name = <<"presence">>, attrs = Attr} ->
++							case escalus_pred:is_stanza_from(
++								room_address(Room, Nick), Stanza) of
++									true ->
++										is_membership_presence(Stanza, <<"none">>, <<"none">>) andalso
++										is_unavailable_presence(Stanza, <<"321">>);
++									false ->
++										case proplists:get_value(<<"type">>, Attr) of
++											<<"unavailable">> -> true;
++											_ -> false
++										end
++							end;
++					#xmlel{name = <<"iq">>} ->
++							case escalus_pred:is_iq_result(Stanza) of
++								true -> true;
++								false ->
++									case is_iq_with_subscription(Stanza, <<"remove">>) of
++										true -> true;
++										false -> false
++									end
++							end;
++					_ -> false
++				end
++            end, Stanzas),
++    lists:all(fun(R) -> R == true end, Results).
++
++
+diff -ruN ejabberd_tests/tests/muc_utils.erl ejabberd_tests_new/tests/muc_utils.erl
+--- ejabberd_tests/tests/muc_utils.erl	1970-01-01 08:00:00.000000000 +0800
++++ ejabberd_tests_new/tests/muc_utils.erl	2015-10-30 17:12:07.486344493 +0700
+@@ -0,0 +1,225 @@
++-module(muc_utils).
++-export([is_presence_with_status_code/2,
++		is_message_with_status_code/2,
++		is_presence_with_role/2,
++		is_iq_with_role/2,
++		is_presence_with_nick/2,
++		is_presence_with_affiliation/2,
++		is_iq_with_affiliation/2,
++		is_iq_with_subscription/2,
++		has_status_codes/2,
++		is_invitation/1,
++		stanza_mediated_invitation/2,
++		stanza_set_roles/2,
++		stanza_set_affiliations/2,
++		is_unavailable_presence/2,
++		is_membership_presence/3,
++		stanza_destroy_room/1,
++		was_destroy_presented/1,
++		was_room_destroyed/1,
++		was_room_created/1,
++		stanza_create_room/3,
++		stanza_enter_room/2,
++		stanza_muc_enter_room/2,
++		room_address/1,
++		room_address/2,
++		was_destroy_default/1,
++		is_presence_available/1
++		]).
++
++-include_lib("escalus/include/escalus.hrl").
++-include_lib("escalus/include/escalus_xmlns.hrl").
++-include_lib("common_test/include/ct.hrl").
++-include_lib("exml/include/exml_stream.hrl").
++-define(WAIT_TIME, 1500).
++-define(MUC_NS, <<"http://jabber.org/protocol/muc">>).
++
++muc_ns_binary() -> <<"http://jabber.org/protocol/muc">>.
++muc_host() ->    <<"conference.localhost">>.
++
++is_presence_with_status_code(Presence, Code) ->
++    escalus:assert(is_presence, Presence),
++    Code == exml_query:path(Presence, [{element, <<"x">>}, {element, <<"status">>},
++        {attr, <<"code">>}]).
++
++is_message_with_status_code(Message, Code) ->
++    escalus_pred:is_message(Message) andalso
++    Code == exml_query:path(Message, [{element, <<"x">>}, {element, <<"status">>},
++        {attr, <<"code">>}]).
++
++is_presence_with_role(Stanza, Role) ->
++    is_with_role(exml_query:subelement(Stanza, <<"x">>), Role).
++
++is_iq_with_role(Stanza, Role) ->
++    is_with_role(exml_query:subelement(Stanza, <<"query">>), Role).
++
++is_with_role(Stanza, _Role) when Stanza == undefined ->
++	false;
++	
++is_with_role(Stanza, Role) ->
++    Items = exml_query:subelements(Stanza, <<"item">>),
++    lists:any(fun(Item) ->
++        exml_query:attr(Item, <<"role">>) =:= Role
++    end, Items).
++
++is_presence_with_nick(Stanza, Nick) ->
++    escalus_pred:is_presence(Stanza) andalso
++    exml_query:path(Stanza,[{element, <<"x">>},
++        {element, <<"item">>}, {attribute, <<"nick">>}]) == Nick.
++
++is_presence_with_affiliation(Stanza, Affiliation) ->
++    is_affiliation(exml_query:subelement(Stanza, <<"x">>), Affiliation).
++
++is_iq_with_affiliation(Stanza, Affiliation) ->
++    is_affiliation(exml_query:subelement(Stanza, <<"query">>), Affiliation).
++
++is_affiliation(Stanza, _Affiliation) when Stanza == undefined ->
++	false;
++
++is_affiliation(Stanza, Affiliation) ->
++    Items = exml_query:subelements(Stanza, <<"item">>),
++    lists:any(fun(Item) ->
++        exml_query:attr(Item, <<"affiliation">>) =:= Affiliation
++    end, Items).
++
++is_iq_with_subscription(Stanza, Subscription) ->
++    is_subscription(exml_query:subelement(Stanza, <<"query">>), Subscription).
++
++is_subscription(Stanza, _Subscription) when Stanza == undefined->
++	false;
++
++is_subscription(Stanza, Subscription) ->
++    Items = exml_query:subelements(Stanza, <<"item">>),
++    lists:any(fun(Item) ->
++        exml_query:attr(Item, <<"subscription">>) =:= Subscription
++    end, Items).
++
++has_status_codes(Stanza, CodeList) ->
++    StatusList = exml_query:subelements(exml_query:subelement(Stanza, <<"x">>), <<"status">>),
++    StanzaCodes = lists:map(fun(Status) ->
++                    exml_query:attr(Status, <<"code">>)
++        end, StatusList),
++    true = lists:all(fun (Code) ->
++                        lists:member(Code, StanzaCodes)
++            end, CodeList).
++
++is_invitation(Stanza) ->
++    escalus:assert(is_message, Stanza),
++    Invitation = exml_query:path(Stanza, [{element, <<"x">>}, {element, <<"invite">>}]),
++	case Invitation of
++		#xmlel{name = <<"invite">>} -> true;
++		_ -> false
++	end.
++
++stanza_set_roles(Room, List) ->
++    Payload = lists:map(fun({Nick, Role}) ->
++        #xmlel{name = <<"item">>,
++        attrs = [{<<"nick">>, Nick}, {<<"role">>, Role}]};
++    ({Nick, Role, Reason}) ->
++        #xmlel{name = <<"item">>,
++        attrs = [{<<"nick">>, Nick}, {<<"role">>, Role}],
++        children = [#xmlel{
++            name = <<"reason">>,
++            children = #xmlcdata{content = Reason}}
++        ]}
++    end, List),
++    stanza_to_room(escalus_stanza:iq_set(?NS_MUC_ADMIN, Payload), Room).
++
++stanza_set_affiliations(Room, List) ->
++    Payload = lists:map(fun({JID, Affiliation}) ->
++        #xmlel{name = <<"item">>,
++        attrs = [{<<"jid">>, JID}, {<<"affiliation">>, Affiliation}]};
++    ({JID, Affiliation, Reason}) ->
++        #xmlel{name = <<"item">>,
++        attrs = [{<<"jid">>, JID}, {<<"affiliation">>, Affiliation}],
++        children = [#xmlel{
++            name = <<"reason">>,
++            children = #xmlcdata{content = Reason}}
++        ]}
++    end, List),
++    stanza_to_room(escalus_stanza:iq_set(?NS_MUC_ADMIN, Payload), Room).
++
++stanza_mediated_invitation(Room, Invited) ->
++    Payload = [ #xmlel{name = <<"invite">>,
++        attrs = [{<<"to">>, escalus_utils:get_short_jid(Invited)}]} ],
++    stanza_to_room(#xmlel{name = <<"message">>,
++        children = [ #xmlel{
++            name = <<"x">>,
++            attrs = [{<<"xmlns">>, ?NS_MUC_USER}],
++            children = Payload }
++        ]}, Room).
++
++stanza_to_room(Stanza, Room) ->
++    escalus_stanza:to(Stanza, room_address(Room)).
++
++stanza_to_room(Stanza, Room, Nick) ->
++    escalus_stanza:to(Stanza, room_address(Room, Nick)).
++
++room_address(Room) when is_binary(Room) ->
++    <<Room/binary, "@", (muc_host())/binary>>.
++
++room_address(Room, Nick) when is_binary(Room), is_binary(Nick) ->
++    <<Room/binary, "@", (muc_host())/binary, "/", Nick/binary>>.
++
++is_unavailable_presence(Stanza, Status) ->
++    escalus_pred:is_presence_with_type(<<"unavailable">>,Stanza) andalso
++    is_presence_with_status_code(Stanza, Status).
++
++is_membership_presence(Stanza, Affiliation, Role) ->
++    is_presence_with_affiliation(Stanza, Affiliation) andalso
++    is_presence_with_role(Stanza, Role).
++
++stanza_destroy_room(Room) ->
++    Payload = [ #xmlel{name = <<"destroy">>} ],
++    stanza_to_room(escalus_stanza:iq_set(?NS_MUC_OWNER, Payload), Room).
++
++was_destroy_presented(#xmlel{children = [Items]} = Presence) ->
++    #xmlel{} = exml_query:subelement(Items, <<"destroy">>),
++    <<"unavailable">> = exml_query:attr(Presence, <<"type">>).
++
++was_room_destroyed(Query) ->
++    timer:sleep(?WAIT_TIME),
++    <<"result">> = exml_query:attr(Query, <<"type">>).
++
++was_destroy_default(Presence) ->
++	has_status_codes(Presence, [<<"332">>]),
++	<<"unavailable">> = exml_query:attr(Presence, <<"type">>).
++
++was_room_created(Stanza = #xmlel{children = [X]}) ->
++    timer:sleep(?WAIT_TIME),
++    has_status_codes(Stanza, [<<"201">>, <<"110">>]),
++    <<"owner">> = exml_query:path(X, [{element, <<"item">>},
++                                      {attr, <<"affiliation">>}]),
++    <<"moderator">> = exml_query:path(X, [{element, <<"item">>},
++                                          {attr, <<"role">>}]).
++
++stanza_enter_room(Room, Nick) ->
++    stanza_to_room(#xmlel{name = <<"presence">>}, Room, Nick).
++
++stanza_create_room(Room, Nick, Default) ->
++	Element = [ #xmlel{
++            name = <<"x">>,
++            attrs = [{<<"xmlns">>, ?MUC_NS}],
++			children = [#xmlel{name = <<"default">>, 
++						children = #xmlcdata{content = integer_to_list(Default)}}]}
++			],
++	Stanza = #xmlel{name = <<"presence">>, children = Element},
++    stanza_to_room(Stanza, Room, Nick).
++
++is_groupchat_message(Stanza) ->
++    escalus_pred:is_message(Stanza) andalso
++    escalus_pred:has_type(<<"groupchat">>, Stanza).
++
++%Basic MUC protocol
++stanza_muc_enter_room(Room, Nick) ->
++    stanza_to_room(
++        escalus_stanza:presence(  <<"available">>,
++                                [#xmlel{ name = <<"x">>, attrs=[{<<"xmlns">>, <<"http://jabber.org/protocol/muc">>}]}]),
++        Room, Nick).
++
++is_presence_available(#xmlel{name = <<"presence">>, children = Children}) ->
++	case Children of
++		[] -> true;
++		_ -> false
++	end.
++

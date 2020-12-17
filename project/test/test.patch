@@ -1,0 +1,811 @@
+diff -ruN ejabberd_tests/default.spec ejabberd_tests_new/default.spec
+--- ejabberd_tests/default.spec	2015-09-22 11:13:16.982898342 +0700
++++ ejabberd_tests_new/default.spec	2015-09-22 11:33:30.606844234 +0700
+@@ -1,20 +1,22 @@
+-{suites, "tests", adhoc_SUITE}.
+-{suites, "tests", last_SUITE}.
+-{suites, "tests", login_SUITE}.
+-{suites, "tests", muc_SUITE}.
+-{suites, "tests", mam_SUITE}.
+-{suites, "tests", offline_SUITE}.
+-{suites, "tests", presence_SUITE}.
+-{suites, "tests", privacy_SUITE}.
+-{suites, "tests", private_SUITE}.
+-{suites, "tests", sic_SUITE}.
+-{suites, "tests", shared_roster_SUITE}.
+-{suites, "tests", vcard_simple_SUITE}.
+-{suites, "tests", websockets_SUITE}.
+-{suites, "tests", metrics_c2s_SUITE}.
+-{suites, "tests", metrics_roster_SUITE}.
+-{suites, "tests", metrics_register_SUITE}.
+-{suites, "tests", metrics_session_SUITE}.
+-{suites, "tests", system_monitor_SUITE}.
++%{suites, "tests", adhoc_SUITE}.
++%{suites, "tests", last_SUITE}.
++%{suites, "tests", login_SUITE}.
++%{suites, "tests", muc_SUITE}.
++%{suites, "tests", mam_SUITE}.
++%{suites, "tests", offline_SUITE}.
++%{suites, "tests", presence_SUITE}.
++%{suites, "tests", privacy_SUITE}.
++%{suites, "tests", private_SUITE}.
++%{suites, "tests", sic_SUITE}.
++%{suites, "tests", shared_roster_SUITE}.
++%{suites, "tests", vcard_simple_SUITE}.
++%{suites, "tests", websockets_SUITE}.
++%{suites, "tests", metrics_c2s_SUITE}.
++%{suites, "tests", metrics_roster_SUITE}.
++%{suites, "tests", metrics_register_SUITE}.
++%{suites, "tests", metrics_session_SUITE}.
++%{suites, "tests", system_monitor_SUITE}.
++{suites, "tests", mod_11_timeline_SUITE}.
++{suites, "tests", mod_grouptimeline_SUITE}.
+ {config, ["test.config"]}.
+ {logdir, "ct_report"}.
+diff -ruN ejabberd_tests/run_common_test.erl ejabberd_tests_new/run_common_test.erl
+--- ejabberd_tests/run_common_test.erl	2015-09-22 11:13:16.982898342 +0700
++++ ejabberd_tests_new/run_common_test.erl	2015-09-22 11:33:30.546844237 +0700
+@@ -97,8 +97,9 @@
+ run_config_test({Name, Variables}, Test, N, Tests) ->
+     Node = get_ejabberd_node(),
+     {ok, Cwd} = call(Node, file, get_cwd, []),
+-    Cfg = filename:join([Cwd, "..", "..", "rel", "files", "ejabberd.cfg"]),
+-    Vars = filename:join([Cwd, "..", "..", "rel", "reltool_vars", "node1_vars.config"]),
++	{ok, Dir} = file:get_cwd(),
++    Cfg = filename:join([Dir, "..", "..", "rel", "files", "ejabberd.cfg"]),
++    Vars = filename:join([Dir, "..", "..", "rel", "reltool_vars", "node1_vars.config"]),
+     CfgFile = filename:join([Cwd, "etc", "ejabberd.cfg"]),
+     {ok, Template} = call(Node, file, read_file, [Cfg]),
+     {ok, Default} = call(Node, file, consult, [Vars]),
+diff -ruN ejabberd_tests/test.config ejabberd_tests_new/test.config
+--- ejabberd_tests/test.config	2015-09-22 11:13:16.982898342 +0700
++++ ejabberd_tests_new/test.config	2015-09-22 11:33:30.606844234 +0700
+@@ -1,7 +1,7 @@
+ %% -*- mode: erlang;erlang-indent-level: 4;indent-tabs-mode: nil -*-
+ 
+ %% the Erlang node name of tested ejabberd/MongooseIM
+-{ejabberd_node, 'ejabberd@localhost'}.
++{ejabberd_node, 'mongooseim@localhost'}.
+ {ejabberd_cookie, ejabberd}.
+ %% the main XMPP domain served by the tested ejabberd/MongooseIM
+ {ejabberd_domain, <<"localhost">>}.
+@@ -25,10 +25,11 @@
+     {carol, [
+         {username, <<"carol">>},
+         {server, <<"localhost">>},
+-        {password, <<"jinglebells">>},
+-        {transport, bosh},
+-        {path, <<"/http-bind">>},
+-        {port, 5280}]},
++        {password, <<"jinglebells">>}%,
++%        {transport, bosh},
++%        {path, <<"/http-bind">>},
++%        {port, 5280}
++	]},
+     {kate, [
+         {username, <<"kate">>},
+         {server, <<"localhost">>},
+@@ -42,10 +43,11 @@
+     {geralt, [
+         {username, <<"geralt">>},
+         {server, <<"localhost">>},
+-        {password, <<"witcher">>},
+-        {transport, ws},
+-        {port, 5280},
+-        {wspath, <<"/ws-xmpp">>}]}
++        {password, <<"witcher">>}%,
++    %    {transport, ws},
++    %    {port, 5280},
++    %    {wspath, <<"/ws-xmpp">>}
++	]}
+ ]}.
+ 
+ {escalus_server2_users, [
+@@ -82,50 +84,50 @@
+ ]}.
+ 
+ {ejabberd_configs, [
+-    {internal_mnesia,
+-     [{sm_backend, "{mnesia, []}"},
+-      {auth_method, "internal"}]},
+-    {internal_redis,
+-     [{sm_backend, "{redis, [{pool_size, 3}, {worker_config, [{host, \"localhost\"}, {port, 6379}]}]}"},
+-      {auth_method, "internal"}]},
+-    {odbc_pgsql_mnesia,
+-     [{sm_backend, "{mnesia, []}"},
+-      {auth_method, "odbc"},
+-      {odbc_server, "{odbc_server, {pgsql, \"localhost\", \"ejabberd\", \"ejabberd\", \"%ODBC_PASSWORD%\"}}."},
+-      {mod_last, "{mod_last_odbc, []},"},
+-      {mod_privacy, "{mod_privacy, [{backend, odbc}]},"},
+-      {mod_private, "{mod_private, [{backend, odbc}]},"},
+-      {mod_offline, "{mod_offline, [{backend, odbc}]},"},
+-      {mod_vcard, "{mod_vcard, [{backend, odbc}]},"},
+-      {mod_roster, "{mod_roster_odbc, []},"}]},
+-    {odbc_mnesia,
+-     [{sm_backend, "{mnesia, []}"},
+-      {auth_method, "odbc"},
+-      {odbc_server, "{odbc_server, {mysql, \"localhost\", \"ejabberd\", \"ejabberd\", \"%ODBC_PASSWORD%\"}}."},
+-      {mod_last, "{mod_last_odbc, []},"},
+-      {mod_privacy, "{mod_privacy, [{backend, odbc}]},"},
+-      {mod_private, "{mod_private, [{backend, odbc}]},"},
+-      {mod_offline, "{mod_offline, [{backend, odbc}]},"},
+-      {mod_vcard, "{mod_vcard, [{backend, odbc}]},"},
+-      {mod_roster, "{mod_roster_odbc, []},"}]},
+-    {odbc_redis,
+-     [{sm_backend, "{redis, [{pool_size, 3}, {worker_config, [{host, \"localhost\"}, {port, 6379}]}]}"},
+-      {auth_method, "odbc"},
+-      {odbc_server, "{odbc_server, {mysql, \"localhost\", \"ejabberd\", \"ejabberd\", \"%ODBC_PASSWORD%\"}}."},
+-      {mod_last, "{mod_last_odbc, []},"},
+-      {mod_privacy, "{mod_privacy, [{backend, odbc}]},"},
+-      {mod_private, "{mod_private, [{backend, odbc}]},"},
+-      {mod_offline, "{mod_offline, [{backend, odbc}]},"},
+-      {mod_vcard, "{mod_vcard, [{backend, odbc}]},"},
+-      {mod_roster, "{mod_roster_odbc, []},"}]},
+-    {external_mnesia,
+-     [{sm_backend, "{mnesia, []}"},
+-      {auth_method, "external"},
+-      {ext_auth_script, "{extauth_program, \"/tmp/sample_external_auth.py\"}."}]},
+-    {external_redis,
+-     [{sm_backend, "{redis, [{pool_size, 3}, {worker_config, [{host, \"localhost\"}, {port, 6379}]}]}"},
+-      {auth_method, "external"},
+-      {ext_auth_script, "{extauth_program, \"/tmp/sample_external_auth.py\"}."}]},
++%    {internal_mnesia,
++%     [{sm_backend, "{mnesia, []}"},
++%      {auth_method, "internal"}]},
++%    {internal_redis,
++%     [{sm_backend, "{redis, [{pool_size, 3}, {worker_config, [{host, \"localhost\"}, {port, 6379}]}]}"},
++%      {auth_method, "internal"}]},
++%    {odbc_pgsql_mnesia,
++%     [{sm_backend, "{mnesia, []}"},
++%      {auth_method, "odbc"},
++%      {odbc_server, "{odbc_server, {pgsql, \"localhost\", \"ejabberd\", \"ejabberd\", \"%ODBC_PASSWORD%\"}}."},
++%      {mod_last, "{mod_last_odbc, []},"},
++%      {mod_privacy, "{mod_privacy, [{backend, odbc}]},"},
++%      {mod_private, "{mod_private, [{backend, odbc}]},"},
++%      {mod_offline, "{mod_offline, [{backend, odbc}]},"},
++%      {mod_vcard, "{mod_vcard, [{backend, odbc}]},"},
++%      {mod_roster, "{mod_roster_odbc, []},"}]},
++%    {odbc_mnesia,
++%     [{sm_backend, "{mnesia, []}"},
++%      {auth_method, "odbc"},
++%      {odbc_server, "{odbc_server, {mysql, \"localhost\", \"ejabberd\", \"ejabberd\", \"%ODBC_PASSWORD%\"}}."},
++%      {mod_last, "{mod_last_odbc, []},"},
++%      {mod_privacy, "{mod_privacy, [{backend, odbc}]},"},
++%      {mod_private, "{mod_private, [{backend, odbc}]},"},
++%      {mod_offline, "{mod_offline, [{backend, odbc}]},"},
++%      {mod_vcard, "{mod_vcard, [{backend, odbc}]},"},
++%      {mod_roster, "{mod_roster_odbc, []},"}]},
++%    {odbc_redis,
++%     [{sm_backend, "{redis, [{pool_size, 3}, {worker_config, [{host, \"localhost\"}, {port, 6379}]}]}"},
++%      {auth_method, "odbc"},
++%      {odbc_server, "{odbc_server, {mysql, \"localhost\", \"ejabberd\", \"ejabberd\", \"%ODBC_PASSWORD%\"}}."},
++%      {mod_last, "{mod_last_odbc, []},"},
++%      {mod_privacy, "{mod_privacy, [{backend, odbc}]},"},
++%      {mod_private, "{mod_private, [{backend, odbc}]},"},
++%      {mod_offline, "{mod_offline, [{backend, odbc}]},"},
++%      {mod_vcard, "{mod_vcard, [{backend, odbc}]},"},
++%      {mod_roster, "{mod_roster_odbc, []},"}]},
++%    {external_mnesia,
++%     [{sm_backend, "{mnesia, []}"},
++%      {auth_method, "external"},
++%      {ext_auth_script, "{extauth_program, \"/tmp/sample_external_auth.py\"}."}]},
++%    {external_redis,
++%     [{sm_backend, "{redis, [{pool_size, 3}, {worker_config, [{host, \"localhost\"}, {port, 6379}]}]}"},
++%      {auth_method, "external"},
++%      {ext_auth_script, "{extauth_program, \"/tmp/sample_external_auth.py\"}."}]},
+     {ldap_mnesia,
+      [{sm_backend, "{mnesia, []}"},
+       {auth_method, "ldap"},
+diff -ruN ejabberd_tests/tests/message_utils.erl ejabberd_tests_new/tests/message_utils.erl
+--- ejabberd_tests/tests/message_utils.erl	1970-01-01 08:00:00.000000000 +0800
++++ ejabberd_tests_new/tests/message_utils.erl	2015-09-22 11:33:30.610844234 +0700
+@@ -0,0 +1,172 @@
++-module(message_utils).
++-compile([export_all]).
++
++-include_lib("escalus/include/escalus.hrl").
++-include_lib("escalus/include/escalus_xmlns.hrl").
++-include_lib("common_test/include/ct.hrl").
++-include_lib("exml/include/exml_stream.hrl").
++
++clean_archive(Config) ->
++        SUs = serv_users(Config),
++        [ delete_user_room(S, U) || {S, U} <- SUs],
++        Config.
++
++serv_users(Config) ->
++    [serv_user(Config, UserSpec)
++     || {_, UserSpec} <- escalus_users:get_users(all)].
++
++serv_user(Config, UserSpec) ->
++    [Username, Server, _Pass] = escalus_users:get_usp(Config, UserSpec),
++    {Server, Username}.
++
++delete_user_room(Server, User) ->
++    rpc_apply(mod_muc, delete_user_rooms, [User, Server]).
++
++rpc_apply(M, F, Args) ->
++    case escalus_ejabberd:rpc(M, F, Args) of
++    {badrpc, Reason} ->
++        ct:fail("~p:~p/~p with arguments ~w fails with reason ~p.",
++                [M, F, length(Args), Args, Reason]);
++    Result ->
++        Result
++    end.
++
++delete_messages(Selector) ->
++	rpc_apply(mod_11_timeline, delete_messages, [Selector]).
++
++set_message_with_file(Recipient, Type, BodyMsg, FileName, FileSize, FileUrl, MimeType, ThumbnailUrl, ThumbnailWidth, ThumbnailHeight) ->
++       #xmlel{name = <<"message">>,
++           attrs = [{<<"type">>, Type},
++                    {<<"to">>, Recipient}],
++           children = [#xmlel{name = <<"body">>, 
++						children = [exml:escape_cdata(BodyMsg)]}] ++
++					  [#xmlel{name = <<"file">>,
++                        children = [#xmlel{name = <<"name">>,
++										children = [exml:escape_cdata(FileName)]}] ++ 
++									[#xmlel{name = <<"size">>, 
++										children = #xmlcdata{content = integer_to_list(FileSize)}}] ++
++									[#xmlel{name = <<"fileUrl">>,
++                                        children = [exml:escape_cdata(FileUrl)]}] ++
++									[#xmlel{name = <<"mimeType">>,
++                                        children = [exml:escape_cdata(MimeType)]}] ++
++									[#xmlel{name = <<"thumbnailUrl">>,
++                                        children = [exml:escape_cdata(ThumbnailUrl)]}] ++
++									[#xmlel{name = <<"thumbnailWidth">>,
++                                        children = #xmlcdata{content = integer_to_list(ThumbnailWidth)}}] ++
++									[#xmlel{name = <<"thumbnailHeight">>,
++                                        children = #xmlcdata{content = integer_to_list(ThumbnailHeight)}}]
++									}]
++				}.
++
++set_message_with_oembed(Recipient, Type, BodyMsg, ProviderUrl, ProviderName, Title, AuthorName, AuthorUrl, ThumbnailUrl, Html, ThumbNailWidth, ThumbNailHeight, OembedType, Version, Url, MeanAlpha, Description, SubType) ->
++       #xmlel{name = <<"message">>,
++           attrs = [{<<"type">>, Type}, {<<"subtype">>, SubType},
++                    {<<"to">>, Recipient}],
++           children = [#xmlel{name = <<"body">>,  
++                        children = [exml:escape_cdata(BodyMsg)]}] ++
++                      [#xmlel{name = <<"oembed">>,
++                        children = [#xmlel{name = <<"provider_url">>,
++                                        children = [exml:escape_cdata(ProviderUrl)]}] ++
++                                    [#xmlel{name = <<"provider_name">>,
++                                        children = [exml:escape_cdata(ProviderName)]}] ++
++                                    [#xmlel{name = <<"title">>,
++                                        children = [exml:escape_cdata(Title)]}] ++
++                                    [#xmlel{name = <<"author_name">>,
++                                        children = [exml:escape_cdata(AuthorName)]}] ++
++                                    [#xmlel{name = <<"author_url">>,
++                                        children = [exml:escape_cdata(AuthorUrl)]}] ++
++                                    [#xmlel{name = <<"thumbnail_url">>,
++                                        children = [exml:escape_cdata(ThumbnailUrl)]}] ++
++                                    [#xmlel{name = <<"html">>,
++                                        children = [exml:escape_cdata(Html)]}] ++
++									[#xmlel{name = <<"thumbnail_width">>,
++                                        children = #xmlcdata{content = integer_to_list(ThumbNailWidth)}}] ++
++                                    [#xmlel{name = <<"thumbnail_height">>,
++                                        children = #xmlcdata{content = integer_to_list(ThumbNailHeight)}}] ++
++									[#xmlel{name = <<"type">>,
++                                        children = [exml:escape_cdata(OembedType)]}] ++
++									[#xmlel{name = <<"version">>,
++                                        children = [exml:escape_cdata(Version)]}] ++
++									[#xmlel{name = <<"url">>,
++                                        children = [exml:escape_cdata(Url)]}] ++
++									[#xmlel{name = <<"mean_alpha">>,
++                                        children = #xmlcdata{content = float_to_list(MeanAlpha)}}] ++
++                                    [#xmlel{name = <<"description">>,
++                                        children = [exml:escape_cdata(Description)]}] 
++                                    }]
++                }.
++
++set_bot_message(Recipient, Type, BodyMsg, Expandbody) ->
++       #xmlel{name = <<"message">>,
++           attrs = [{<<"type">>, Type}, {<<"subtype">>, <<"bot-gitlab">>},
++                    {<<"to">>, Recipient}],
++           children = [#xmlel{name = <<"body">>,
++                        children = [exml:escape_cdata(BodyMsg)]}] ++
++                      [#xmlel{name = <<"expandbody">>,
++                        children = [exml:escape_cdata(Expandbody)]}]}.
++
++set_add_user_message(Recipient, BodyMsg) ->
++       #xmlel{name = <<"message">>,
++           attrs = [{<<"type">>, <<"groupchat">>}, 
++					{<<"subtype">>, <<"welcome">>},
++                    {<<"to">>, Recipient}],
++           children = [#xmlel{name = <<"body">>,
++                        children = [exml:escape_cdata(BodyMsg)]}]}.
++
++
++%% -------------------------
++%% Helper (Muc)
++%% -------------------------
++muc_ns_binary() -> <<"http://jabber.org/protocol/muc">>.
++muc_host() ->    <<"conference.localhost">>.
++
++start_alice_room(Config) ->
++    %% TODO: ensure, that the room's archive is empty
++    RoomName = <<"alicesroom">>,
++    RoomNick = <<"alicesnick">>,
++    [Alice | _] = ?config(escalus_users, Config),
++    start_room(Config, Alice, RoomName, RoomNick, [{persistent, true}]).
++
++start_room(Config, User, Room, Nick, Opts) ->
++    From = generate_rpc_jid(User),
++    rpc_apply(mod_muc, create_instant_room,
++        [<<"localhost">>, Room, From, Nick, Opts]),
++    [{nick, Nick}, {room, Room} | Config].
++
++generate_rpc_jid({_,User}) ->
++    {username, Username} = lists:keyfind(username, 1, User),
++    {server, Server} = lists:keyfind(server, 1, User),
++    {jid, Username, Server, <<"rpc">>, Username, Server, <<"rpc">>}.
++
++stanza_muc_enter_room(Room, Nick) ->
++    Elem = #xmlel{ name = <<"x">>,
++                   attrs=[{<<"xmlns">>, muc_ns_binary()}]},
++    stanza_to_room(escalus_stanza:presence(<<"available">>, [Elem]),
++                   Room, Nick).
++
++stanza_to_room(Stanza, Room) ->
++    escalus_stanza:to(Stanza, room_address(Room)).
++
++stanza_to_room(Stanza, Room, Nick) ->
++    escalus_stanza:to(Stanza, room_address(Room, Nick)).
++
++room_address(Room) when is_binary(Room) ->
++    <<Room/binary, "@", (muc_host())/binary>>.
++
++room_address(Room, Nick) when is_binary(Room), is_binary(Nick) ->
++    <<Room/binary, "@", (muc_host())/binary, "/", Nick/binary>>.
++
++destroy_room(Config) ->
++    RoomName = ?config(room, Config),
++    case rpc_apply(ets, lookup, [muc_online_room, {RoomName, muc_host()}]) of
++        [{_,_,Pid}|_] -> gen_fsm:send_all_state_event(Pid, destroy);
++        _ -> ok
++    end.
++
++nick(User) -> escalus_utils:get_username(User).
++
++nick_to_jid(UserName, Config) when is_atom(UserName) ->
++    UserSpec = escalus_users:get_userspec(Config, UserName),
++    escalus_users:get_jid(Config, UserSpec).
++
++
+diff -ruN ejabberd_tests/tests/mod_11_timeline_SUITE.erl ejabberd_tests_new/tests/mod_11_timeline_SUITE.erl
+--- ejabberd_tests/tests/mod_11_timeline_SUITE.erl	1970-01-01 08:00:00.000000000 +0800
++++ ejabberd_tests_new/tests/mod_11_timeline_SUITE.erl	2015-09-22 11:33:30.610844234 +0700
+@@ -0,0 +1,163 @@
++-module(mod_11_timeline_SUITE).
++
++%% CT callbacks
++-export([all/0,
++         suite/0,
++		 groups/0,
++         init_per_suite/1,
++         end_per_suite/1,
++         init_per_testcase/2,
++         end_per_testcase/2]).
++
++-export([
++		send_normal_message/1
++		, send_message_with_file/1
++        , send_message_with_oembed/1
++        , send_bot_message/1
++		]).
++
++-include_lib("escalus/include/escalus.hrl").
++-include_lib("escalus/include/escalus_xmlns.hrl").
++-include_lib("common_test/include/ct.hrl").
++-include_lib("exml/include/exml_stream.hrl").
++
++-import(message_utils, [set_message_with_file/10,
++						set_message_with_oembed/18,
++						set_bot_message/4,
++						delete_messages/1, 
++						clean_archive/1]).
++
++-define(assert_equal(E, V), (
++    [ct:fail("ASSERT EQUAL~n\tExpected ~p~n\tValue ~p~n", [(E), (V)])
++     || (E) =/= (V)]
++    )).
++
++
++all() ->  [
++		{group, chat_message}
++		].
++
++groups() -> [
++			{chat_message, [sequence], [send_normal_message
++									, send_message_with_file
++									, send_message_with_oembed
++									, send_bot_message
++									]}
++			].
++suite() ->
++    escalus:suite().
++
++init_per_suite(Config) ->
++    NewConfig = escalus:create_users(escalus:init_per_suite(Config)),
++    clean_archive(NewConfig).
++%	escalus:create_users(escalus:init_per_suite(Config)).
++
++end_per_suite(Config) ->
++    clean_archive(Config),
++	Config1 = escalus:delete_users(Config),
++	Selector = [{fromId, <<"alice">>}, {receiveId, <<"bob">>}, {senderId, <<"alice">>}],
++    delete_messages(Selector),
++    escalus:end_per_suite(Config1).
++
++init_per_testcase(CaseName, Config) ->
++     Config1 = escalus:init_per_testcase(CaseName, Config),
++     clean_archive(Config1).
++%	escalus:init_per_testcase(CaseName, Config).
++     
++end_per_testcase(CaseName, Config) ->
++    escalus:end_per_testcase(CaseName, Config).
++
++%%----------------------------------------------
++%% Testcase
++%%----------------------------------------------
++send_normal_message(Config) ->
++    escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++
++        % Alice sends a message to Bob
++        escalus_client:send(Alice, escalus_stanza:chat_to(Bob, <<"Hi!">>)),
++
++        % Bob gets the message
++        escalus_assert:is_chat_message(<<"Hi!">>, escalus_client:wait_for_stanza(Bob)),
++		escalus_assert:is_chat_message(<<"Hi!">>, escalus_client:wait_for_stanza(Alice))
++
++    end).
++
++
++send_message_with_file(Config) ->
++	escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++		% Alice sends a message to Bob
++		% set_message_with_file(Recipient, Type, BodyMsg, FileName, FileSize, FileUrl, MimeType, ThumbnailUrl, ThumbnailWidth, ThumbnailHeight)
++        escalus:send(Alice, set_message_with_file(escalus_utils:get_jid(Bob), 
++												<<"chat">>, 
++												<<"File uploaded: http://s3-ap-southeast-1.amazonaws.com/..">>, 
++												<<"File name">>,
++												1257,
++												<<"http://s3-ap-southeast-1.amazonaws.com/..">>,
++												<<"application/x-shellscript">>,
++												<<"http://gen/zoom/614305409.jpg">>,
++												128, 128)),
++
++        % Bob gets the message
++        escalus_assert:is_chat_message(<<"File uploaded: http://s3-ap-southeast-1.amazonaws.com/..">>, 
++														escalus_client:wait_for_stanza(Bob)),
++        escalus_assert:is_chat_message(<<"File uploaded: http://s3-ap-southeast-1.amazonaws.com/..">>, 
++														escalus_client:wait_for_stanza(Alice))
++
++    end).
++
++send_message_with_oembed(Config) ->
++    escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++        % Alice sends a message to Bob
++        % set_message_with_oembed(Recipient, Type, BodyMsg, ProviderUrl, ProviderName, Title, AuthorName, AuthorUrl, ThumbnailUrl, Html, ThumbNailWidth, ThumbNailHeight, OembedType, Version, Url, MeanAlpha, Description, SubType)
++        escalus:send(Alice, set_message_with_oembed(escalus_utils:get_jid(Bob),
++                                                <<"chat">>,
++                                                <<"http://embed.ly/embed/pricing">>,
++                                                <<"http://embed.ly">>,
++                                                <<"Embedly">>,
++                                                <<"Embed Product Pricing | Embedly">>,
++                                                <<"KhangLe">>,
++                                                <<"http://gen/zoom/614305409.jpg">>,
++                                                <<"http://embed.ly/static/images/logos/logo_color.png?v=4b245">>, 
++												<<"">>,
++                                                399,
++                                                127,
++												<<"link">>,
++												<<"1.0">>,
++												<<"http://embed.ly/embed/pricing">>,
++												32.7480314961,
++												<<"Get started today with Embed. Free for up to 5,000 URLs a month, $19 for up to 50,000 URLs and bulk pricing.">>,
++												<<"">>)),
++
++        % Bob gets the message
++        escalus_assert:is_chat_message(<<"http://embed.ly/embed/pricing">>,
++                                                        escalus_client:wait_for_stanza(Bob)),
++        escalus_assert:is_chat_message(<<"http://embed.ly/embed/pricing">>,
++                                                        escalus_client:wait_for_stanza(Alice))
++
++    end).
++
++send_bot_message(Config) ->
++    escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++        % Alice sends a message to Bob
++        % set_bot_message(Recipient, Type, BodyMsg, Expandbody)
++        escalus:send(Alice, set_bot_message(escalus_utils:get_jid(Bob),
++                                                <<"chat">>,
++                                                <<"[Diaspora:refs/heads/master] 4 new commits by John Smith">>,
++                                                <<"[http://localhost/diaspora/commits/b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327|b6568d]: Update Catalan translation to e38cb41. - Jordi Mallach\n[http://localhost/diaspora/commits/da1560886d4f094c3e6c9ef40349f7d38b5d27d7|da1560]: fixed readme - GitLab dev user\n">>
++                                                )),
++
++        % Bob gets the message
++        escalus_assert:is_chat_message(<<"[Diaspora:refs/heads/master] 4 new commits by John Smith">>,
++                                                        escalus_client:wait_for_stanza(Bob)),
++        escalus_assert:is_chat_message(<<"[Diaspora:refs/heads/master] 4 new commits by John Smith">>,
++                                                        escalus_client:wait_for_stanza(Alice))
++
++    end).
++%%--------------------------------------------
++%% Prepare data for testing
++%%--------------------------------------------
++
++%%---------------------------------------------
++%% Query to get history
++%%---------------------------------------------
++
+diff -ruN ejabberd_tests/tests/mod_grouptimeline_SUITE.erl ejabberd_tests_new/tests/mod_grouptimeline_SUITE.erl
+--- ejabberd_tests/tests/mod_grouptimeline_SUITE.erl	1970-01-01 08:00:00.000000000 +0800
++++ ejabberd_tests_new/tests/mod_grouptimeline_SUITE.erl	2015-09-22 11:33:30.610844234 +0700
+@@ -0,0 +1,266 @@
++-module(mod_grouptimeline_SUITE).
++
++%% CT callbacks
++-export([all/0,
++         suite/0,
++		 groups/0,
++         init_per_suite/1,
++         end_per_suite/1,
++         init_per_testcase/2,
++         end_per_testcase/2]).
++
++-export([
++		send_group_message/1
++		, send_message_with_file/1
++        , send_message_with_oembed/1
++        , send_bot_message/1
++		, send_add_user_message/1
++		]).
++
++-include_lib("escalus/include/escalus.hrl").
++-include_lib("escalus/include/escalus_xmlns.hrl").
++-include_lib("common_test/include/ct.hrl").
++-include_lib("exml/include/exml_stream.hrl").
++
++-import(message_utils, [set_message_with_file/10,
++						set_message_with_oembed/18,
++						set_bot_message/4,
++						set_add_user_message/2,
++						delete_messages/1,
++						start_alice_room/1, 
++						room_address/1,
++						stanza_muc_enter_room/2,
++						nick/1,
++						clean_archive/1,
++						stanza_to_room/2,
++						stanza_to_room/3,
++						destroy_room/1]).
++
++-define(assert_equal(E, V), (
++    [ct:fail("ASSERT EQUAL~n\tExpected ~p~n\tValue ~p~n", [(E), (V)])
++     || (E) =/= (V)]
++    )).
++
++
++all() ->  [
++		{group, chat_message}
++		].
++
++groups() -> [
++			{chat_message, [sequence], [send_group_message
++									, send_message_with_file
++									, send_message_with_oembed
++									, send_bot_message
++									, send_add_user_message
++									]}
++			].
++suite() ->
++    escalus:suite().
++
++init_per_suite(Config) ->
++	escalus:create_users(escalus:init_per_suite(Config)).
++
++end_per_suite(Config) ->
++%	Config1 = escalus:delete_users(Config),
++	Selector = [{fromId, <<"alicesroom">>}, {receiveId, <<"null">>}, {senderId, <<"alice">>}],
++    delete_messages(Selector),
++    escalus:end_per_suite(escalus:delete_users(Config)).
++
++init_per_testcase(CaseName, Config) ->
++	clean_archive(Config),
++	Config1 = escalus:init_per_testcase(CaseName, Config),
++	start_alice_room(Config1).
++     
++end_per_testcase(CaseName, Config) ->
++	destroy_room(Config),
++	clean_archive(Config),
++    escalus:end_per_testcase(CaseName, Config).
++
++%%----------------------------------------------
++%% Testcase
++%%----------------------------------------------
++send_group_message(Config) ->
++	Room = ?config(room, Config),
++    escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++		
++		RoomAddr = room_address(Room),
++
++		escalus:send(Alice, stanza_muc_enter_room(Room, nick(Alice))),
++        escalus:send(Bob, stanza_muc_enter_room(Room, nick(Bob))),
++
++		escalus:wait_for_stanzas(Bob, 5, 5000),
++        escalus:wait_for_stanzas(Alice, 5, 5000),
++		
++        % Alice sends a message to Bob
++        escalus_client:send(Alice, escalus_stanza:groupchat_to(RoomAddr, <<"Hi!">>)),
++
++        % Bob gets the message
++		check_respond(<<"Hi!">>, escalus_client:wait_for_stanza(Bob)),
++		check_respond(<<"Hi!">>, escalus_client:wait_for_stanza(Alice))
++    end).
++
++
++send_message_with_file(Config) ->
++	escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++
++		Room = ?config(room, Config),
++		
++		RoomAddr = room_address(Room),
++
++        escalus:send(Alice, stanza_muc_enter_room(Room, nick(Alice))),
++        escalus:send(Bob, stanza_muc_enter_room(Room, nick(Bob))),
++
++        escalus:wait_for_stanzas(Bob, 5, 5000),
++        escalus:wait_for_stanzas(Alice, 5, 5000),
++
++		% Alice sends a message to Bob
++		% set_message_with_file(Recipient, Type, BodyMsg, FileName, FileSize, FileUrl, MimeType, ThumbnailUrl, ThumbnailWidth, ThumbnailHeight)
++        escalus:send(Alice, stanza_to_room(set_message_with_file(RoomAddr,
++												<<"groupchat">>, 
++												<<"File uploaded: http://s3-ap-southeast-1.amazonaws.com/..">>, 
++												<<"File name">>,
++												1257,
++												<<"http://s3-ap-southeast-1.amazonaws.com/..">>,
++												<<"application/x-shellscript">>,
++												<<"http://gen/zoom/614305409.jpg">>,
++												128, 128), Room)),
++
++        % Bob gets the message
++		MsgBob = escalus_client:wait_for_stanza(Bob),
++		MsgAlice = escalus_client:wait_for_stanza(Alice),
++        check_respond_file(<<"File uploaded: http://s3-ap-southeast-1.amazonaws.com/..">>, MsgBob), 
++        check_respond_file(<<"File uploaded: http://s3-ap-southeast-1.amazonaws.com/..">>, MsgAlice) 
++
++    end).
++
++send_message_with_oembed(Config) ->
++    escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++		Room = ?config(room, Config),
++
++        RoomAddr = room_address(Room),
++
++        escalus:send(Alice, stanza_muc_enter_room(Room, nick(Alice))),
++        escalus:send(Bob, stanza_muc_enter_room(Room, nick(Bob))),
++
++        escalus:wait_for_stanzas(Bob, 5, 5000),
++        escalus:wait_for_stanzas(Alice, 5, 5000),
++
++        % Alice sends a message to Bob
++        % set_message_with_oembed(Recipient, Type, BodyMsg, ProviderUrl, ProviderName, Title, AuthorName, AuthorUrl, ThumbnailUrl, Html, ThumbNailWidth, ThumbNailHeight, OembedType, Version, Url, MeanAlpha, Description, SubType)
++        escalus:send(Alice, stanza_to_room(set_message_with_oembed(RoomAddr,
++                                                <<"groupchat">>,
++                                                <<"http://embed.ly/embed/pricing">>,
++                                                <<"http://embed.ly">>,
++                                                <<"Embedly">>,
++                                                <<"Embed Product Pricing | Embedly">>,
++                                                <<"KhangLe">>,
++                                                <<"http://gen/zoom/614305409.jpg">>,
++                                                <<"http://embed.ly/static/images/logos/logo_color.png?v=4b245">>, 
++												<<"">>,
++                                                399,
++                                                127,
++												<<"link">>,
++												<<"1.0">>,
++												<<"http://embed.ly/embed/pricing">>,
++												32.7480314961,
++												<<"Get started today with Embed. Free for up to 5,000 URLs a month, $19 for up to 50,000 URLs and bulk pricing.">>,
++												<<"">>), Room)),
++		
++        % Bob gets the message
++        MsgBob = escalus_client:wait_for_stanza(Bob),
++        MsgAlice = escalus_client:wait_for_stanza(Alice),
++
++		check_respond_oembed(<<"http://embed.ly/embed/pricing">>, MsgBob),
++        check_respond_oembed(<<"http://embed.ly/embed/pricing">>, MsgAlice)
++
++    end).
++
++send_bot_message(Config) ->
++    escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++		Room = ?config(room, Config),
++
++        RoomAddr = room_address(Room),
++
++        escalus:send(Alice, stanza_muc_enter_room(Room, nick(Alice))),
++        escalus:send(Bob, stanza_muc_enter_room(Room, nick(Bob))),
++
++        escalus:wait_for_stanzas(Bob, 5, 5000),
++        escalus:wait_for_stanzas(Alice, 5, 5000),
++
++        % Alice sends a message to Bob
++        % set_bot_message(Recipient, Type, BodyMsg, Expandbody)
++        escalus:send(Alice, stanza_to_room(set_bot_message(RoomAddr,
++                                                <<"groupchat">>,
++                                                <<"[Diaspora:refs/heads/master] 4 new commits by John Smith">>,
++                                                <<"[http://localhost/diaspora/commits/b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327|b6568d]: Update Catalan translation to e38cb41. - Jordi Mallach\n[http://localhost/diaspora/commits/da1560886d4f094c3e6c9ef40349f7d38b5d27d7|da1560]: fixed readme - GitLab dev user\n">>
++                                                ), Room)),
++
++        % Bob gets the message
++		check_respond_file(<<"[Diaspora:refs/heads/master] 4 new commits by John Smith">>,
++                                                        escalus_client:wait_for_stanza(Bob)),
++        check_respond_file(<<"[Diaspora:refs/heads/master] 4 new commits by John Smith">>,
++                                                        escalus_client:wait_for_stanza(Alice))
++
++    end).
++
++send_add_user_message(Config) ->
++    escalus:story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
++		Room = ?config(room, Config),
++
++        RoomAddr = room_address(Room),
++
++        escalus:send(Alice, stanza_muc_enter_room(Room, nick(Alice))),
++        escalus:send(Bob, stanza_muc_enter_room(Room, nick(Bob))),
++
++        escalus:wait_for_stanzas(Bob, 5, 5000),
++        escalus:wait_for_stanzas(Alice, 5, 5000),
++
++        % Alice sends a message to Bob
++        % set_bot_message(Recipient, Type, BodyMsg, Expandbody)
++        escalus:send(Alice, stanza_to_room(set_add_user_message(RoomAddr,
++                                                <<"Dung Le has join room">> ), Room)),
++
++        % Bob gets the message
++        check_respond(<<"Dung Le has join room">>,
++                                                        escalus_client:wait_for_stanza(Bob)),
++        check_respond(<<"Dung Le has join room">>,
++                                                        escalus_client:wait_for_stanza(Alice))
++
++    end).
++
++
++check_respond(Msg, Respond) ->
++	#xmlel{children = BodyTag} = Respond,
++	[#xmlel{name = <<"body">>, children = [{xmlcdata, Body}]}] = BodyTag,
++	try
++		?assert_equal(Body, Msg), ok
++	catch Class:Reason ->
++		Stacktrace = erlang:get_stacktrace(),
++        ct:pal("Body: ~p~n", [Body]),
++        erlang:raise(Class, Reason, Stacktrace)
++	end.
++
++check_respond_file(Msg, Respond) ->
++    #xmlel{children = Children} = Respond,
++	[BodyTag | _] = Children,
++    #xmlel{name = <<"body">>, children = [{xmlcdata, Body}]} = BodyTag,
++    try
++        ?assert_equal(Body, Msg), ok
++    catch Class:Reason ->
++        Stacktrace = erlang:get_stacktrace(),
++        ct:pal("Body: ~p~n", [Body]),
++        erlang:raise(Class, Reason, Stacktrace)
++    end.
++
++check_respond_oembed(Msg, Respond) ->
++    #xmlel{children = Children} = Respond,
++    [BodyTag | _] = Children,
++    #xmlel{name = <<"body">>, children = [{xmlcdata, Body}]} = BodyTag,
++    try
++        ?assert_equal(Body, Msg), ok
++    catch Class:Reason ->
++        Stacktrace = erlang:get_stacktrace(),
++        ct:pal("Body: ~p~n", [Body]),
++        erlang:raise(Class, Reason, Stacktrace)
++    end.
++

@@ -1,0 +1,214 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>SUBSCRIPTION &mdash; HistoryChat 00 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '00',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="HistoryChat 00 documentation" href="index.html" />
+    <link rel="next" title="LOG CHAT" href="logchat.html" />
+    <link rel="prev" title="MUC" href="muc.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="logchat.html" title="LOG CHAT"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="muc.html" title="MUC"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">HistoryChat 00 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="subscription">
+<h1>SUBSCRIPTION<a class="headerlink" href="#subscription" title="Permalink to this headline">¶</a></h1>
+<p>Test1 and Test2 become roster when they send an subscription each other.</p>
+<ul>
+<li><p class="first">One direction Subscription</p>
+<blockquote>
+<div><ul>
+<li><p class="first">Request</p>
+<blockquote>
+<div><p>Test1 sends subscribe to Test2 to invite</p>
+<div class="highlight-python"><pre>&lt;presence from='test1@localhost/resource' to='test2@localhost' type='subscribe'/&gt;</pre>
+</div>
+<p>Server will forward this presence to Test2:</p>
+<div class="highlight-python"><pre>&lt;presence from='test1@localhost' to='test2@localhost/telnet' xml:lang='' type='subscribe'/&gt;</pre>
+</div>
+<p>And also response to Test1 to confirm</p>
+<div class="highlight-python"><pre>&lt;iq from='test1@localhost' to='test1@localhost/telnet' id='push3397374354' type='set'&gt;
+        &lt;query xmlns='jabber:iq:roster'&gt;
+                &lt;item ask='subscribe' subscription='none' jid='test2@localhost'/&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+</div></blockquote>
+</li>
+<li><p class="first">Accept</p>
+<blockquote>
+<div><p>To accept invitation, Test2 will send an subscribed to accept:</p>
+<div class="highlight-python"><pre>&lt;presence from='test2@localhost/resource' to='test1@localhost' type='subscribed'/&gt;</pre>
+</div>
+<p>Server forward stanza to Test1 and also response to Test1 with an &lt;iq&gt; of subscription value &#8216;to&#8217;:</p>
+<div class="highlight-python"><pre>&lt;presence from='test2@localhost' to='test1@localhost/telnet' type='subscribed'/&gt;
+
+&lt;iq from='test1@localhost' to='test1@localhost/telnet' id='push1338302721' type='set'&gt;
+        &lt;query xmlns='jabber:iq:roster'&gt;
+                &lt;item subscription='to' jid='test2@localhost'/&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+<p>And the same time, server also responses to Test2 an &lt;iq/&gt; of subscrition &#8216;from&#8217;:</p>
+<div class="highlight-python"><pre>&lt;iq from='test2@localhost' to='test2@localhost/telnet' id='push2422382305' type='set'&gt;
+        &lt;query xmlns='jabber:iq:roster'&gt;
+                &lt;item subscription='from' jid='test1@localhost'/&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+</div></blockquote>
+</li>
+</ul>
+<p>After this, now Test1 can see any status from Test2, but Test2 can not see Test1.</p>
+</div></blockquote>
+</li>
+<li><p class="first">Bidirection Subscription</p>
+<blockquote>
+<div><ul>
+<li><p class="first">Request</p>
+<p>To Test2 also sees status of Test1, Test2 sends to Test1 an subscribe</p>
+<div class="highlight-python"><pre>&lt;presence from='test2@localhost/resource' to='test1@localhost' type='subscribe'/&gt;</pre>
+</div>
+<p>Server forwards this stanza to Test1 and also response to Test1 an &lt;iq&gt;</p>
+<div class="highlight-python"><pre>&lt;presence from='test2@localhost' to='test1@localhost/telnet' type='subscribe'/&gt;
+
+&lt;iq from='test1@localhost' to='test1@localhost/telnet' id='push1297383213' type='set'&gt;
+        &lt;query xmlns='jabber:iq:roster'&gt;
+                &lt;item subscription='to' jid='test2@localhost'/&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+<p>The same time, Test2 will receive an inform iq:</p>
+<div class="highlight-python"><pre>&lt;iq from='test2@localhost' to='test2@localhost/telnet' id='push105291863' type='set'&gt;
+        &lt;query xmlns='jabber:iq:roster'&gt;
+                &lt;item ask='subscribe' subscription='from' jid='test1@localhost'/&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+</li>
+<li><p class="first">Accept</p>
+<blockquote>
+<div><p>Test1 accepts invitation, he send an subscribed:</p>
+<div class="highlight-python"><pre>&lt;presence from='test1@localhost/resource' to='test2@localhost' type='subscribed'/&gt;</pre>
+</div>
+<p>Server will send to both Test1 and Test2 with subsciption &#8216;both&#8217;</p>
+<div class="highlight-python"><pre>&lt;iq from='test2@localhost' to='test2@localhost/telnet' id='push3317716284' type='set'&gt;
+        &lt;query xmlns='jabber:iq:roster'&gt;
+                &lt;item subscription='both' jid='test1@localhost'/&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;
+
+&lt;iq from='test1@localhost' to='test1@localhost/telnet' id='push1399557018' type='set'&gt;
+        &lt;query xmlns='jabber:iq:roster'&gt;
+                &lt;item subscription='both' jid='test2@localhost'/&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<ul class="last simple">
+<li>subscription = &#8216;both&#8217; : two users can see each other.</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="muc.html"
+                        title="previous chapter">MUC</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="logchat.html"
+                        title="next chapter">LOG CHAT</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/roster.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="logchat.html" title="LOG CHAT"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="muc.html" title="MUC"
+             >previous</a> |</li>
+        <li><a href="index.html">HistoryChat 00 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, HueTran.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b3.
+    </div>
+  </body>
+</html>

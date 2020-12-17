@@ -1,0 +1,7 @@
+History Chat
+============
+
+To store and retrieve messages for c2c (client to client) and muc, we will 
+apply `XEP 0313`_ - Message Archive Management to our stanza rules.
+
+.. _XEP 0313: http://xmpp.org/extensions/xep-0313.html  

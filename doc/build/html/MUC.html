@@ -1,0 +1,564 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>MUC &mdash; HistoryChat 00 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '00',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="HistoryChat 00 documentation" href="index.html" />
+    <link rel="next" title="Roster" href="roster.html" />
+    <link rel="prev" title="Welcome to HistoryChat’s documentation!" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="roster.html" title="Roster"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Welcome to HistoryChat’s documentation!"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">HistoryChat 00 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="muc">
+<h1>MUC<a class="headerlink" href="#muc" title="Permalink to this headline">¶</a></h1>
+<p>Our performance of muc room with the following rules:</p>
+<ul class="simple">
+<li><a class="reference internal" href="#section1"><em>Create Room</em></a></li>
+<li><a class="reference internal" href="#section2"><em>Invite User</em></a></li>
+<li><a class="reference internal" href="#section3"><em>Change Subject</em></a></li>
+<li><a class="reference internal" href="#section4"><em>Romove Occupant</em></a></li>
+<li><a class="reference internal" href="#section5"><em>Destroy Room</em></a></li>
+<li><a class="reference internal" href="#section6"><em>Change Avaliable Status</em></a></li>
+<li><a class="reference internal" href="#section7"><em>Change Room Configuration</em></a></li>
+</ul>
+<p>On our system, only owner (admin) is allowed to invite, remove the member list and change subject. Normal member does not allow to do this.
+All rules introduce in this document follow the <a class="reference external" href="http://xmpp.org/extensions/xep-0045.html">XEP-0045</a> - Multi-User Chat.</p>
+<p>To make a rule for room chat, we will use 3 user such as tester1, tester2, tester3.</p>
+<ol class="arabic simple" id="section1">
+<li>Create Room</li>
+</ol>
+<blockquote>
+<div><p>The first, tester1 will send a &lt;presence/&gt; to create a room if room no exist:</p>
+<div class="highlight-python"><pre>&lt;presence from='tester1@localhost/telnet to='room1@conference.localhost/nickname1'&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc'/&gt;
+&lt;/presence&gt;</pre>
+</div>
+<p>Server response with &lt;presence/&gt;:</p>
+<div class="highlight-python"><pre>&lt;presence from='room1@conference.localhost/nickname1' to='tester1@localhost/telnet' xml:lang=''&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc#user'&gt;
+                &lt;item jid='tester1@localhost/telnet' affiliation='owner' role='moderator'/&gt;
+                &lt;status code='110'/&gt;
+                &lt;status code='201'/&gt;
+        &lt;/x&gt;
+&lt;/presence&gt;
+
+&lt;message from='room1@conference.localhost' to='tester1@localhost/telnet' type='groupchat'&gt;
+        &lt;subject/&gt;
+        &lt;body/&gt;
+&lt;/message&gt;</pre>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<ul class="last simple">
+<li>Code 201 : to acknowledge that the room no exist and are created. Without this code, that means that room existed.</li>
+<li>tester1 is room&#8217;s owner and is added to room.</li>
+<li>After sending an &lt;presence/&gt; response, server continue send an &lt;message&gt; with an &lt;subject&gt; element is empty.</li>
+</ul>
+</div>
+<p>If it is new room, the first time it&#8217;s clocked. Room owner must send &lt;iq/&gt; to unlock and tell to server that all default configure will be applied to this room:</p>
+<div class="highlight-python"><pre>&lt;iq id='C1' from='tester1@localhost/telnet to='room1@conference.localhost' type='set'&gt;
+        &lt;query xmlns='http://jabber.org/protocol/muc#owner'&gt;
+                &lt;x xmlns='jabber:x:data' type='submit'/&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+<p>Server response to inform a successful room creation</p>
+<div class="highlight-python"><pre>&lt;iq from='room1@conference.localhost' to='tester1@localhost/telnet' id='C1' type='result'&gt;
+        &lt;query xmlns='http://jabber.org/protocol/muc#owner'/&gt;
+&lt;/iq&gt;</pre>
+</div>
+</div></blockquote>
+<ol class="arabic" id="section2" start="2">
+<li><p class="first">Invite To Room</p>
+<blockquote>
+<div><ul>
+<li><p class="first">Room Member</p>
+<blockquote>
+<div><ul>
+<li><p class="first">Owner Invite</p>
+<p>Owner invites user tester2 to room</p>
+<div class="highlight-python"><pre>&lt;message id='INV1' from='tester1@localhost/telnet' to='room1@conference.localhost'&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc#user'&gt;
+                &lt;invite to='tester2@localhost'&gt;
+                        &lt;reason/&gt;
+                &lt;/invite&gt;
+        &lt;/x&gt;
+&lt;/message&gt;</pre>
+</div>
+<p>Server sends to tester2 the following message:</p>
+<div class="highlight-python"><pre>&lt;message from='room1@conference.localhost' to='tester2@localhost' type='normal'&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc#user'&gt;
+                &lt;invite from='tester1@localhost/telnet'&gt;
+                        &lt;reason&gt;&lt;/reason&gt;
+                &lt;/invite&gt;
+        &lt;/x&gt;
+        &lt;x xmlns='jabber:x:conference' jid='room1@conference.localhost'&gt;
+        &lt;/x&gt;
+        &lt;body&gt;tester1@localhost/telnet invites you to the room room1@conference.localhost&lt;/body&gt;
+&lt;/message&gt;</pre>
+</div>
+<p>After this, tester2 now is member of room1.</p>
+<p>tester2 can decline the invitation by send a following message:</p>
+<div class="highlight-python"><pre>&lt;message id='Decl1' to='room1@conference.localhost'&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc#user'&gt;
+                &lt;decline to='tester1@localhost'&gt;
+                        &lt;reason&gt;&lt;/reason&gt;
+                &lt;/decline&gt;
+        &lt;/x&gt;
+&lt;/message&gt;</pre>
+</div>
+<p>Room inform to owner that invitation is declined:</p>
+<div class="highlight-python"><pre>&lt;message from='room1@conference.localhost' to='tester1@localhost' xml:lang='' id='Decl1'&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc#user'&gt;
+                &lt;decline from='tester4@localhost/telnet'&gt;
+                        &lt;reason/&gt;
+                &lt;/decline&gt;
+        &lt;/x&gt;
+&lt;/message&gt;</pre>
+</div>
+</li>
+<li><p class="first">Member Invite</p>
+<p>Member (not owner) invites user to room:</p>
+<div class="highlight-python"><pre>&lt;message id='INV2' to='room1@conference.localhost'&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc#user'&gt;
+                &lt;invite to='tester3@localhost'&gt;
+                        &lt;reason&gt;&lt;/reason&gt;
+                &lt;/invite&gt;
+        &lt;/x&gt;
+&lt;/message&gt;</pre>
+</div>
+<p>Server responses an &lt;forbidden/&gt; message:</p>
+<div class="highlight-python"><pre>&lt;message from='room1@conference.localhost' to='tester2@localhost/telnet' type='error' xml:lang='' id='IV2'&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc#user'&gt;
+                &lt;invite to='tester3@localhost'&gt;
+                        &lt;reason/&gt;
+                &lt;/invite&gt;
+        &lt;/x&gt;
+        &lt;error code='403' type='auth'&gt;
+                &lt;forbidden xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/&gt;
+        &lt;/error&gt;
+&lt;/message&gt;</pre>
+</div>
+</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Enter The Room</p>
+<blockquote>
+<div><ul>
+<li><p class="first">Member Enter The Room</p>
+<p>After an invitation, a member can send an request to enter to chat room:</p>
+<div class="highlight-python"><pre>&lt;presence id='J1' from='tester2@localhost/telnet' to='room1@conference.localhost/nickname2'&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc'/&gt;
+&lt;/presence&gt;</pre>
+</div>
+<p>Success enter the room, tester2 receives all presence of existed occupant in room include itself:</p>
+<div class="highlight-python"><pre>&lt;presence from='room1@conference.localhost/nickname1' to='tester2@localhost/telnet' xml:lang=''&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc#user'&gt;
+                &lt;item affiliation='owner' role='moderator'/&gt;
+        &lt;/x&gt;
+&lt;/presence&gt;
+
+&lt;presence from='room1@conference.localhost/nickname2' to='tester2@localhost/telnet' xml:lang='' id='R1'&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc#user'&gt;
+                &lt;item affiliation='member' role='participant'/&gt;
+                &lt;status code='110'/&gt;
+        &lt;/x&gt;
+&lt;/presence&gt;
+
+&lt;message from='room1@conference.localhost' to='tester2@localhost/telnet' type='groupchat'&gt;
+        &lt;subject/&gt;
+        &lt;body/&gt;
+&lt;/message&gt;</pre>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<ul class="last simple">
+<li>Code 110 : is attached to an self-presence so that member knows that it is prefered as an occupant.</li>
+<li>Self-presence to make tester2 knows that it has finished receiving the room roster.</li>
+<li>After finishing broadcast all presences to new occupant, server continue send an &lt;message/&gt; with current subject. If no subject is set, return an empty &lt;subject/&gt;.</li>
+</ul>
+</div>
+<p>The same time, all existed occupant also receives presence of new occupant:</p>
+<div class="highlight-python"><pre>&lt;presence from='room1@conference.localhost/nickname2' to='tester1@localhost/telnet' xml:lang=''&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc#user'&gt;
+                &lt;item jid='tester2@localhost/telnet' affiliation='member' role='participant'/&gt;
+        &lt;/x&gt;
+&lt;/presence&gt;</pre>
+</div>
+</li>
+<li><p class="first">Not Member Enter The Room</p>
+<blockquote>
+<div><p>An normal user not member of room tries to enter the room:</p>
+<div class="highlight-python"><pre>&lt;presence  id='J2' from='tester3@localhost/telnet' to='room1@conference.localhost/nickname3'&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc'/&gt;
+&lt;/presence&gt;</pre>
+</div>
+<p>Server will response an error message:</p>
+<div class="highlight-python"><pre>&lt;presence from='room1@conference.localhost/nickname3' to='tester3@localhost/telnet' type='error' xml:lang=''&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc'/&gt;
+                &lt;error code='407' type='auth'&gt;
+                        &lt;registration-required xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/&gt;
+                                &lt;text xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'&gt;
+                                        Membership is required to enter this room
+                                &lt;/text&gt;
+                &lt;/error&gt;
+&lt;/presence&gt;</pre>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</div></blockquote>
+</li>
+</ol>
+<ol class="arabic" id="section3" start="3">
+<li><p class="first">Change The Subject</p>
+<blockquote>
+<div><ul>
+<li><p class="first">Owner Request</p>
+<blockquote>
+<div><p>Owner requests to change room subject:</p>
+<div class="highlight-python"><pre>&lt;message id='Sub1' from='tester1@localhost/telnet' to='room1@conference.localhost' type='groupchat'&gt;
+        &lt;subject&gt;Fire Burn and Cauldron Bubble!&lt;/subject&gt;
+&lt;/message&gt;</pre>
+</div>
+<p>Server braodcasts to all occupants about subject change:</p>
+<div class="highlight-python"><pre>&lt;message from='room1@conference.localhost/nickname1' to='tester2@localhost/telnet' xml:lang='' id='Sub2' type='groupchat'&gt;
+        &lt;subject&gt;Fire Burn and Cauldron Bubble!&lt;/subject&gt;
+&lt;/message&gt;</pre>
+</div>
+</div></blockquote>
+</li>
+<li><p class="first">Member Request</p>
+<blockquote>
+<div><p>Member requests to change the room subject:</p>
+<div class="highlight-python"><pre>&lt;message id='Sub2' from='tester2@localhost/telnet' to='room1@conference.localhost' type='groupchat'&gt;
+        &lt;subject&gt;This is music room!&lt;/subject&gt;
+&lt;/message&gt;</pre>
+</div>
+<p>Server responses an &lt;forbiddent&gt; message:</p>
+<div class="highlight-python"><pre>&lt;message from='room1@conference.localhost/nickname2' to='tester2@localhost/telnet' type='error' xml:lang='' id='Sub3'&gt;
+        &lt;subject&gt;This is music room!&lt;/subject&gt;
+        &lt;error code='403' type='auth'&gt;
+                &lt;forbidden xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/&gt;
+                &lt;text xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'&gt;
+                        Only moderators are allowed to change the subject in this room
+                &lt;/text&gt;
+        &lt;/error&gt;
+&lt;/message&gt;</pre>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</div></blockquote>
+</li>
+</ol>
+<ol class="arabic" id="section4" start="4">
+<li><p class="first">Remove Occupant</p>
+<blockquote>
+<div><ul>
+<li><p class="first">Owner Request.</p>
+<blockquote>
+<div><p>Owner removes member tester2 from room:</p>
+<div class="highlight-python"><pre>&lt;iq id='RV1' to='room1@conference.localhost'type='set'&gt;
+        &lt;query xmlns='http://jabber.org/protocol/muc#admin'&gt;
+                &lt;item affiliation='none' jid='tester2@localhost'/&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+<p>Server responses to owner to inform an success:</p>
+<div class="highlight-python"><pre>&lt;iq from='room1@conference.localhost' to='tester1@localhost/telnet' id='RV1' type='result'&gt;
+        &lt;query xmlns='http://jabber.org/protocol/muc#admin'/&gt;
+&lt;/iq&gt;</pre>
+</div>
+<p>And server also broadcasts to all occupants include the removed occupant to declare an removal:</p>
+<div class="highlight-python"><pre>&lt;presence from='room1@conference.localhost/nickname2' to='tester2@localhost/telnet' type='unavailable'&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc#user'&gt;
+                &lt;item affiliation='none' role='none'/&gt;
+                &lt;status code='321'/&gt;
+        &lt;/x&gt;
+&lt;/presence&gt;
+
+&lt;presence from='room1@conference.localhost/nickname2' to='tester3@localhost/telnet' type='unavailable'&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc#user'&gt;
+                &lt;item affiliation='none' role='none'/&gt;
+                &lt;status code='321'/&gt;
+        &lt;/x&gt;
+&lt;/presence&gt;</pre>
+</div>
+<p>After all, tester2 is not member of room more.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">To add an removed occupant to room again, the client just resend an invite message, following an request to enter the room.</p>
+</div>
+</div></blockquote>
+</li>
+<li><p class="first">Member Request</p>
+<blockquote>
+<div><p>Assume that tester2 and tester3 is member of room and not owner. tester2 removes tester3 from room:</p>
+<div class="highlight-python"><pre>&lt;iq id='RV2' to='room1@conference.localhost'type='set'&gt;
+        &lt;query xmlns='http://jabber.org/protocol/muc#admin'&gt;
+                &lt;item affiliation='none' jid='tester3@localhost'/&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+<p>Server responses an &lt;forbiddent&gt; message:</p>
+<div class="highlight-python"><pre>&lt;iq from='room1@conference.localhost' to='tester2@localhost/telnet' id='RV2' type='error'&gt;
+        &lt;query xmlns='http://jabber.org/protocol/muc#admin'&gt;
+                &lt;item affiliation='none' jid='tester3@localhost'/&gt;
+        &lt;/query&gt;
+        &lt;error code='403' type='auth'&gt;
+                &lt;forbidden xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/&gt;
+        &lt;/error&gt;
+&lt;/iq&gt;</pre>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</div></blockquote>
+</li>
+</ol>
+<ol class="arabic" id="section5" start="5">
+<li><p class="first">Destroy Room</p>
+<blockquote>
+<div><ul>
+<li><p class="first">Owner Request</p>
+<blockquote>
+<div><p>Owner requests to destroy room:</p>
+<div class="highlight-python"><pre>&lt;iq id='Det2' to='room1@conference.localhost' type='set'&gt;
+        &lt;query xmlns='http://jabber.org/protocol/muc#owner'&gt;
+                &lt;destroy jid='room1@conference.localhost'&gt;
+                        &lt;reason&gt;&lt;/reason
+                &lt;/destroy&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+<p>Server broadcasts presence type=&#8217;unavailable&#8217; to all occupants to inform that occupant is removed from room:</p>
+<div class="highlight-python"><pre>&lt;presence from='room1@conference.localhost/nickname1' to='tester1@localhost/telnet' type='unavailable'&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc#user'&gt;
+                &lt;item affiliation='none' role='none'/&gt;
+                &lt;destroy jid='room1@conference.localhost'&gt;
+                        &lt;reason/&gt;
+                &lt;/destroy&gt;
+        &lt;/x&gt;
+&lt;/presence&gt;
+
+&lt;presence from='room1@conference.localhost/nickname2' to='tester2@localhost/telnet' type='unavailable'&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc#user'&gt;
+                &lt;item affiliation='none' role='none'/&gt;
+                &lt;destroy jid='room1@conference.localhost'&gt;
+                        &lt;reason/&gt;
+                &lt;/destroy&gt;
+        &lt;/x&gt;
+&lt;/presence&gt;</pre>
+</div>
+<p>And server also informs owner of successful Destruction:</p>
+<div class="highlight-python"><pre>&lt;iq from='room1@conference.localhost' to='tester1@localhost/telnet' id='Det2' type='result'&gt;
+        &lt;query xmlns='http://jabber.org/protocol/muc#owner'/&gt;
+&lt;/iq&gt;</pre>
+</div>
+</div></blockquote>
+</li>
+<li><p class="first">Member Request</p>
+<blockquote>
+<div><p>Member tester2 not owner request destroy room:</p>
+<div class="highlight-python"><pre>&lt;iq id='Det1' to='room1@conference.localhost' type='set'&gt;
+        &lt;query xmlns='http://jabber.org/protocol/muc#owner'&gt;
+                &lt;destroy jid='room1@conference.localhost'&gt;
+                        &lt;reason&gt;&lt;/reason&gt;
+                &lt;/destroy&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+<p>Server responses an &lt;forbidden/&gt; message:</p>
+<div class="highlight-python"><pre>&lt;iq from='room1@conference.localhost' to='tester2@localhost/telnet' id='Det1' type='error'&gt;
+        &lt;query xmlns='http://jabber.org/protocol/muc#owner'&gt;
+                &lt;destroy jid='room1@conference.localhost'&gt;
+                        &lt;reason/&gt;
+                &lt;/destroy&gt;
+        &lt;/query&gt;
+        &lt;error code='403' type='auth'&gt;
+                &lt;forbidden xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/&gt;
+                &lt;text xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'&gt;
+                        Owner privileges required
+                &lt;/text&gt;
+        &lt;/error&gt;
+&lt;/iq&gt;</pre>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</div></blockquote>
+</li>
+</ol>
+<ol class="arabic" id="section6" start="6">
+<li><p class="first">Change Avaliable Status</p>
+<blockquote>
+<div><p>Occupant tester1 change available status:</p>
+<div class="highlight-python"><pre>&lt;presence from='tester1@localhost/telnet' id='St1' to='romm1@conference.localhost'&gt;
+        &lt;show&gt;away&lt;/show&gt;
+        &lt;status&gt;
+                gone where the goblins go
+        &lt;/status&gt;
+&lt;/presence&gt;</pre>
+</div>
+<p>Server broadcasts to all occupants include itself:</p>
+<div class="highlight-python"><pre>&lt;presence from='romm1@conference.localhost/nickname1' to='tester1@localhost/telnet' xml:lang='' id='St1'&gt;
+        &lt;show&gt;away&lt;/show&gt;
+        &lt;status&gt;gone where the goblins go&lt;/status&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc#user'&gt;
+                &lt;item jid='tester1@localhost/telnet' affiliation='owner' role='moderator'/&gt;
+                &lt;status code='110'/&gt;
+        &lt;/x&gt;
+&lt;/presence&gt;
+
+&lt;presence from='romm1@conference.localhost/nickname1' to='tester2@localhost/telnet' xml:lang='' id='St1'&gt;
+        &lt;show&gt;away&lt;/show&gt;
+        &lt;status&gt;gone where the goblins go&lt;/status&gt;
+        &lt;x xmlns='http://jabber.org/protocol/muc#user'&gt;
+                &lt;item affiliation='owner' role='moderator'/&gt;
+        &lt;/x&gt;
+&lt;/presence&gt;</pre>
+</div>
+</div></blockquote>
+</li>
+</ol>
+<ol class="arabic" id="section7" start="7">
+<li><p class="first">Change Room Configuration</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The configuration form have more fields than the one below. However with currently version, just apply below form as an standard to all existed rooms which created with boris code .</p>
+</div>
+<p>Owner send &lt;iq/&gt; contain an desire configuration form as follow:</p>
+<div class="highlight-python"><pre>&lt;iq  id='Config'  to='room@conference.localhost' type='set'&gt;
+        &lt;query xmlns='http://jabber.org/protocol/muc#owner'&gt;
+                &lt;x xmlns='jabber:x:data' type='submit'&gt;
+                        &lt;field var='FORM_TYPE'&gt;
+                                &lt;value&gt;http://jabber.org/protocol/muc#roomconfig&lt;/value&gt;
+                        &lt;/field&gt;
+                        &lt;field type='boolean' label='Make room persistent' var='muc#roomconfig_persistentroom'&gt;
+                                &lt;value&gt;1&lt;/value&gt;
+                        &lt;/field&gt;
+                        &lt;field type='boolean' label='Make room members-only' var='muc#roomconfig_membersonly'&gt;
+                                &lt;value&gt;1&lt;/value&gt;
+                        &lt;/field&gt;
+                        &lt;field type='boolean' label='Allow users to change the subject' var='muc#roomconfig_changesubject'&gt;
+                                &lt;value&gt;0&lt;/value&gt;
+                        &lt;/field&gt;
+                        &lt;field type='boolean' label='Allow users to send private messages' var='allow_private_messages'&gt;
+                                &lt;value&gt;0&lt;/value&gt;
+                        &lt;/field&gt;
+                &lt;/x&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+</li>
+</ol>
+<blockquote>
+<div><p>Update configuration successfully, server response to Owner</p>
+<div class="highlight-python"><pre>&lt;iq from='room@conference.localhost' to='tester1@localhost/telnet' id='Config' type='result'&gt;
+        &lt;query xmlns='http://jabber.org/protocol/muc#owner'/&gt;
+&lt;/iq&gt;</pre>
+</div>
+</div></blockquote>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Welcome to HistoryChat&#8217;s documentation!</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="roster.html"
+                        title="next chapter">Roster</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/muc.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="roster.html" title="Roster"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Welcome to HistoryChat’s documentation!"
+             >previous</a> |</li>
+        <li><a href="index.html">HistoryChat 00 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, HueTran.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b3.
+    </div>
+  </body>
+</html>

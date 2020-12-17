@@ -1,0 +1,136 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>RECONFIG &mdash; HistoryChat 00 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '00',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="HistoryChat 00 documentation" href="index.html" />
+    <link rel="next" title="LOG CHAT" href="logchat.html" />
+    <link rel="prev" title="SUBSCRIPTION" href="roster.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="logchat.html" title="LOG CHAT"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="roster.html" title="SUBSCRIPTION"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">HistoryChat 00 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="reconfig">
+<h1>RECONFIG<a class="headerlink" href="#reconfig" title="Permalink to this headline">¶</a></h1>
+<p>Using telnet to make a manual reconfigure.</p>
+<ul>
+<li><p class="first">First, connect to xmpp server</p>
+<div class="highlight-python"><pre>telnet 125.212.212.52 5222</pre>
+</div>
+</li>
+<li><p class="first">Then, start by send a &lt;stream&gt;:</p>
+<div class="highlight-python"><pre>&lt;stream:stream to='htklabs.com' xmlns='jabberd:client' xmlns:stream='http://etherx.jabber.org/streams'&gt;</pre>
+</div>
+</li>
+<li><p class="first">Perform an authenticated login:</p>
+<div class="highlight-python"><pre>&lt;iq id='A1' type='set'&gt;&lt;query xmlns='jabber:iq:auth'&gt;&lt;username&gt;5370861ecdf11b540511ac93&lt;/username&gt;&lt;resource&gt;telnet&lt;/resource&gt;&lt;password&gt;3d722de4b662b16697083a7462f82ccdfd446f12f1513dca55628576f442724b78a612d82b23ee38&lt;/password&gt;&lt;/query&gt;&lt;/iq&gt;
+
+&lt;presence/&gt;</pre>
+</div>
+</li>
+<li><p class="first">And then manual sends an reconfigure to room</p>
+<div class="highlight-python"><pre>&lt;iq  id='Reconfig'  to='539590c2d1224b7828357e07@conference.htklabs.com' type='set'&gt;&lt;query xmlns='http://jabber.org/protocol/muc#owner'&gt;&lt;x xmlns='jabber:x:data' type='submit'&gt;&lt;field var='FORM_TYPE'&gt;&lt;value&gt;http://jabber.org/protocol/muc#roomconfig&lt;/value&gt;&lt;/field&gt;&lt;field type='boolean' label='Make room persistent' var='muc#roomconfig_persistentroom'&gt;&lt;value&gt;1&lt;/value&gt;&lt;/field&gt;&lt;field type='boolean' label='Make room members-only' var='muc#roomconfig_membersonly'&gt;&lt;value&gt;1&lt;/value&gt;&lt;/field&gt;&lt;field type='boolean' label='Allow users to change the subject' var='muc#roomconfig_changesubject'&gt;&lt;value&gt;0&lt;/value&gt;&lt;/field&gt;&lt;field type='boolean' label='Allow users to send private messages' var='allow_private_messages'&gt;&lt;value&gt;0&lt;/value&gt;&lt;/field&gt;&lt;/x&gt;&lt;/query&gt;&lt;/iq&gt;</pre>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">To reconfigure room, user must be room&#8217;s owner.</p>
+</div>
+</li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="roster.html"
+                        title="previous chapter">SUBSCRIPTION</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="logchat.html"
+                        title="next chapter">LOG CHAT</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/telnet.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="logchat.html" title="LOG CHAT"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="roster.html" title="SUBSCRIPTION"
+             >previous</a> |</li>
+        <li><a href="index.html">HistoryChat 00 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, HueTran.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b3.
+    </div>
+  </body>
+</html>

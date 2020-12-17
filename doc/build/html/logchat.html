@@ -1,0 +1,572 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>LOG CHAT &mdash; HistoryChat 00 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '00',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="HistoryChat 00 documentation" href="index.html" />
+    <link rel="next" title="DATABASE" href="logchatdb.html" />
+    <link rel="prev" title="Roster" href="roster.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="logchatdb.html" title="DATABASE"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="roster.html" title="Roster"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">HistoryChat 00 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="log-chat">
+<h1>LOG CHAT<a class="headerlink" href="#log-chat" title="Permalink to this headline">¶</a></h1>
+<p>To store and retrieve log chat for both logchat (client to client) and muc, we will
+apply <a class="reference external" href="http://xmpp.org/extensions/xep-0313.html">XEP 0313</a> - Message Archive Management to our stanza rules.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<ul class="last simple">
+<li>&#8216;localhost&#8217; in this document can be replaced by suitable server host.</li>
+<li>Time must be UTC and adhere to DateTime format specified in <a class="reference external" href="http://xmpp.org/extensions/xep-0082.html">XEP-0082</a> - XMPP Date and Time Profiles</li>
+</ul>
+</div>
+<div class="section" id="c2c">
+<h2>C2C<a class="headerlink" href="#c2c" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>Archiving Messages</li>
+</ol>
+<ul>
+<li><p class="first">David sends a message to Michael:</p>
+<div class="highlight-python"><pre>&lt;message to='michale@localhost' type='chat'&gt;
+        &lt;body&gt;Hi, it's me, David&lt;/body&gt;
+&lt;/message&gt;</pre>
+</div>
+</li>
+</ul>
+<blockquote>
+<div><p>Server will include element &lt;archived/&gt; to message to inform that message is stored. An unique uid
+is assigned to message. In that time,  Michael will receive the following messages:</p>
+<div class="highlight-python"><pre>&lt;message from='david@localhost/resource' to='michale@localhost' type='chat'&gt;
+        &lt;body&gt;Hi, it's me, David&lt;/body&gt;
+        &lt;archived by='michale@localhost' id='28482-98726-73623'/&gt;
+&lt;/message&gt;</pre>
+</div>
+</div></blockquote>
+<ul>
+<li><p class="first">David send a file to Michael:</p>
+<div class="highlight-python"><pre>&lt;message to='michale@localhost' type='chat'&gt;
+        &lt;body&gt;
+                &lt;file&gt;
+                        &lt;name&gt;file name&lt;/name&gt;
+                        &lt;size&gt;file size&lt;/size&gt;
+                        &lt;fileUrl&gt;file url&lt;/fileUrl&gt;
+                        &lt;mimeType&gt;jpg&lt;/imeType&gt;
+                        &lt;thumbnailUrl&gt;thumb url&lt;thumbnailUrl&gt;
+                &lt;/file&gt;
+        &lt;/body&gt;
+&lt;/message&gt;</pre>
+</div>
+</li>
+</ul>
+<blockquote>
+<div><p>Server do the same things like normal chat, Michael will receive the message:</p>
+<div class="highlight-python"><pre>&lt;message from='david@localhost/resource' to='michale@localhost' type='chat'&gt;
+        &lt;body&gt;
+                &lt;file&gt;
+                        &lt;name&gt;file name&lt;/name&gt;
+                        &lt;size&gt;file size&lt;/size&gt;
+                        &lt;fileUrl&gt;file url&lt;/fileUrl&gt;
+                        &lt;mimeType&gt;jpg&lt;/imeType&gt;
+                        &lt;thumbnailUrl&gt;thumb url&lt;thumbnailUrl&gt;
+                &lt;/file&gt;
+        &lt;/body&gt;
+        &lt;archived by='michale@localhost' id='28482-98726-73890'/&gt;
+&lt;/message&gt;</pre>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Attribute id :  the message&#8217;s uid and unique.</p>
+</div>
+</div></blockquote>
+<ol class="arabic" start="2">
+<li><p class="first">Query The Archive</p>
+<p>To query the archive message, we must follow <a class="reference external" href="http://xmpp.org/extensions/xep-0059.html">XEP-0059</a> - Result Set Management (RSM)
+to limit the result by paging.</p>
+</li>
+</ol>
+<ul>
+<li><p class="first">First Request.</p>
+<blockquote>
+<div><ul>
+<li><p class="first">David query the messages before a certain point:</p>
+<div class="highlight-python"><pre>&lt;iq type='get' id='A1' to='logchat.localhost'&gt;
+        &lt;query xmlns='urn:xmpp:mam:tmp' queryid='Q1'/&gt;
+                &lt;with&gt;michael@localhost&lt;/with&gt;
+                &lt;start&gt;2010-08-07T13:23:54Z&lt;/end&gt;
+                &lt;set xmlns='http://jabber.org/protocol/rsm'&gt;
+                        &lt;max&gt;50&lt;/max&gt;
+                &lt;/set&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+</li>
+</ul>
+<blockquote>
+<div><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<ul class="last simple">
+<li>&lt;start/&gt; element is used to include the previous messages to a certain point in time. If &lt;start/&gt; element is omitted, default recent time is considered as start time.</li>
+<li>&lt;with/&gt; element is used to just query the communication with contact &#8216;michael&#8217;. If &lt;with/&gt; is omitted, default query all communication of user &#8216;david&#8217; correspond to time query.</li>
+<li>Include &lt;set/&gt; element, server will return a limited result assigned in &lt;max/&gt; element.</li>
+</ul>
+</div>
+</div></blockquote>
+<ul>
+<li><p class="first">David query the messages after a certain point:</p>
+<div class="highlight-python"><pre>&lt;iq type='get' id='A4' to='logchat.localhost'&gt;
+            &lt;query xmlns='urn:xmpp:mam:tmp' queryid='f27'/&gt;
+                    &lt;with&gt;michael@localhost&lt;/with&gt;
+                    &lt;end&gt;2010-07-07T13:23:54Z&lt;/end&gt;
+                    &lt;set xmlns='http://jabber.org/protocol/rsm'&gt;
+                            &lt;max&gt;50&lt;/max&gt;
+                    &lt;/set&gt;
+            &lt;/query&gt;
+    &lt;/iq&gt;</pre>
+</div>
+</li>
+<li><p class="first">David query all messages in a certain timespan:</p>
+<div class="highlight-python"><pre>&lt;iq type='get' id='A4' to='logchat.localhost'&gt;
+        &lt;query xmlns='urn:xmpp:mam:tmp' queryid='f27'/&gt;
+                &lt;with&gt;michael@localhost&lt;/with&gt;
+                &lt;start&gt;2010-07-07T13:23:54Z&lt;/end&gt;
+                &lt;end&gt;2010-08-07T13:23:54Z&lt;/end&gt;
+                &lt;set xmlns='http://jabber.org/protocol/rsm'&gt;
+                        &lt;max&gt;50&lt;/max&gt;
+                &lt;/set&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+</li>
+<li><p class="first">David query the messages in the last pages:</p>
+<div class="highlight-python"><pre>&lt;iq type='get' id='A4' to='logchat.localhost'&gt;
+        &lt;with&gt;michael@localhost&lt;/with&gt;
+        &lt;query xmlns='urn:xmpp:mam:tmp' queryid='f27'/&gt;
+                &lt;set xmlns='http://jabber.org/protocol/rsm'&gt;
+                        &lt;max&gt;50&lt;/max&gt;
+                        &lt;before/&gt;
+                &lt;/set&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+</li>
+<li><p class="first">Server Response.</p>
+<p>Firstly, server will send the limited number of matching messages which is considered as first page result
+with the following forms:</p>
+<div class="highlight-python"><pre>&lt;message id='B1' from='logchat.localhost' to='david@localhost/resource'&gt;
+        &lt;result xmlns='urn:xmpp:mam:tmp' queryid='Q1' id='28482-98726-73623'&gt;
+                &lt;forwarded xmlns='urn:xmpp:forward:0'&gt;
+                        &lt;delay xmlns='urn:xmpp:delay' stamp='2010-07-10T23:08:25Z'/&gt;
+                        &lt;message from='david@localhost/resource' to='michale@localhost/resource' type='chat'&gt;
+                                &lt;body&gt;Hi, it's me, David&lt;/body&gt;
+                        &lt;/message&gt;
+                &lt;/forwarded&gt;
+        &lt;/result&gt;
+&lt;/message&gt;
+
+&lt;message id='B2' from='logchat.localhost' to='david@localhost/resource'&gt;
+        &lt;result xmlns='urn:xmpp:mam:tmp' queryid='Q1' id='28482-98726-73890'&gt;
+                &lt;forwarded xmlns='urn:xmpp:forward:0'&gt;
+                        &lt;delay xmlns='urn:xmpp:delay' stamp='2010-07-10T23:09:32Z'/&gt;
+                        &lt;message from='david@localhost/resource' to='michale@localhost/resource' type='chat'&gt;
+                                &lt;body&gt;
+                                        &lt;file&gt;
+                                                &lt;name&gt;file name&lt;/name&gt;
+                                                &lt;size&gt;file size&lt;/size&gt;
+                                                &lt;fileUrl&gt;file url&lt;/fileUrl&gt;
+                                                &lt;mimeType&gt;jpg&lt;/imeType&gt;
+                                                &lt;thumbnailUrl&gt;thumb url&lt;thumbnailUrl&gt;
+                                        &lt;/file&gt;
+                                &lt;/body&gt;
+                        &lt;/message&gt;
+                &lt;/forwarded&gt;
+        &lt;/result&gt;
+&lt;/message&gt;</pre>
+</div>
+</li>
+</ul>
+<blockquote>
+<div><p>After finishing sending all matching messages, to ensure the result are complete server will send &lt;iq/&gt; result:</p>
+<div class="highlight-python"><pre>&lt;iq type='result' id='A1' from='logchat.localhost' to='david@localhost/resource'&gt;
+        &lt;query xmlns='urn:xmpp:mam:tmp' queryid='Q1'&gt;
+                &lt;with&gt;michael@localhost&lt;/with&gt;
+                &lt;start&gt;2010-06-07T00:00:00Z&lt;/start&gt;
+                &lt;end&gt;2010-07-07T05:03:27Z&lt;/end&gt;
+                &lt;set xmlns='http://jabber.org/protocol/rsm'&gt;
+                        &lt;first index='0'&gt;28482-98726-73623&lt;/first&gt;
+                        &lt;last&gt;28482-98726-80012&lt;/last&gt;
+                        &lt;count&gt;1000&lt;/count&gt;
+                &lt;/set&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<ul class="last simple">
+<li>&lt;first&gt; and &lt;last&gt; elements specific the UID of the first and last returned result.</li>
+<li>&lt;count&gt; element includes number of messages in the full set.</li>
+<li>Attribute &#8216;stamp&#8217; of &lt;delay&gt; contains original timestamp of the message.</li>
+<li>Attribute &#8216;index&#8217; should be 0 if it is the first of returned result of full set.</li>
+<li>Attribute &#8216;queryid&#8217; of matching message result should be the same with client query request.</li>
+<li>Attribute &#8216;id&#8217; of &lt;iq/ type=&#8217;result&#8217;&gt; should be the same with &lt;iq/ type=&#8217;get&#8217;&gt;.</li>
+</ul>
+</div>
+</div></blockquote>
+</div></blockquote>
+</li>
+<li><p class="first">Request Through Result.</p>
+<blockquote>
+<div><p>Client resends the same request include &lt;after/&gt; element and receive the next page of result:</p>
+<div class="highlight-python"><pre>&lt;iq type='get' id='A2' to='logchat.localhost'&gt;
+        &lt;query xmlns='urn:xmpp:mam:tmp' queryid='Q2'/&gt;
+                &lt;with&gt;michael@localhost&lt;/with&gt;
+                &lt;start&gt;2010-08-07T13:23:54Z&lt;/end&gt;
+                &lt;set xmlns='http://jabber.org/protocol/rsm'&gt;
+                        &lt;max&gt;50&lt;/max&gt;
+                        &lt;after&gt;28482-98726-80012&lt;/after&gt;
+                &lt;/set&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Request should contain an &lt;after/&gt; with the UID of the last message it received from the previous query.</p>
+</div>
+<p>Server Response:</p>
+<div class="highlight-python"><pre>[...... server sends matching messages.....]
+&lt;iq type='result' id='A2' from='logchat.localhost' to='david@localhost/resource'&gt;
+        &lt;query xmlns='urn:xmpp:mam:tmp' queryid='Q2'&gt;
+                &lt;with&gt;michael@localhost&lt;/with&gt;
+                &lt;start&gt;2010-07-07T05:03:27Z&lt;/start&gt;
+                &lt;end&gt;2010-07-07T10:03:27Z&lt;/end&gt;
+                &lt;set xmlns='http://jabber.org/protocol/rsm'&gt;
+                        &lt;first index='50'&gt;28482-98726-80012&lt;/first&gt;
+                        &lt;last&gt;28482-98726-90043&lt;/last&gt;
+                        &lt;count&gt;1000&lt;/count&gt;
+                &lt;/set&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+<p>Client resends same request include &lt;before/&gt; element and receive the previous page of result:</p>
+<div class="highlight-python"><pre>&lt;iq type='get' id='A3' to='logchat.localhost'&gt;
+        &lt;query xmlns='urn:xmpp:mam:tmp' queryid='Q3'&gt;
+                &lt;with&gt;michael@localhost&lt;/with&gt;
+                &lt;start&gt;2010-08-07T13:23:54Z&lt;/end&gt;
+                &lt;set xmlns='http://jabber.org/protocol/rsm'&gt;
+                        &lt;max&gt;50&lt;/max&gt;
+                        &lt;before&gt;28482-98726-80012&lt;/after&gt;
+                &lt;/set&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+<p>Server Response:</p>
+<div class="highlight-python"><pre>[...... server sends matching messages.....]
+&lt;iq type='result' id='A3' from='logchat.localhost' to='david@localhost/resource'&gt;
+        &lt;query xmlns='urn:xmpp:mam:tmp' queryid='Q3'&gt;
+                &lt;with&gt;michael@localhost&lt;/with&gt;
+                &lt;start&gt;2010-07-07T05:03:27Z&lt;/start&gt;
+                &lt;end&gt;2010-07-07T10:03:27Z&lt;/end&gt;
+                &lt;set xmlns='http://jabber.org/protocol/rsm'&gt;
+                        &lt;first index='0'&gt;28482-98726-73623&lt;/first&gt;
+                        &lt;last&gt;28482-98726-80012&lt;/last&gt;
+                        &lt;count&gt;1000&lt;/count&gt;
+                &lt;/set&gt;
+        /query&gt;
+&lt;/iq&gt;</pre>
+</div>
+</div></blockquote>
+</li>
+<li><p class="first">Return Empty Page:</p>
+<div class="highlight-python"><pre>&lt;iq type='result' id='A3' from='logchat.localhost' to='david@localhost/resource'&gt;
+        &lt;query xmlns='urn:xmpp:mam:tmp' queryid='Q3'&gt;
+                &lt;set xmlns='http://jabber.org/protocol/rsm'&gt;
+                        &lt;count&gt;1000&lt;/count&gt;
+                &lt;/set&gt;
+        &lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+</li>
+</ul>
+<blockquote>
+<div><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">&lt;count&gt; contains number of messages in full set.</p>
+</div>
+</div></blockquote>
+<ul>
+<li><p class="first">Return Page-Not-Found:</p>
+<div class="highlight-python"><pre>&lt;iq type='error' id='A3' from='logchat.localhost' to='david@localhost/resource'&gt;
+        &lt;query xmlns='urn:xmpp:mam:tmp' queryid='Q3'&gt;
+                &lt;start&gt;2010-08-07T13:23:54Z&lt;/end&gt;
+                &lt;set xmlns='http://jabber.org/protocol/rsm'&gt;
+                        &lt;max&gt;50&lt;/max&gt;
+                        &lt;before&gt;28482-98726-80012&lt;/after&gt;
+                &lt;/set&gt;
+        &lt;/query&gt;
+        &lt;error type='cancel'&gt;
+                &lt;item-not-found xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/&gt;
+        &lt;/error&gt;
+&lt;/iq&gt;</pre>
+</div>
+</li>
+</ul>
+<blockquote>
+<div><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">UID in the &lt;after/&gt; or &lt;before/&gt; no longer exists.</p>
+</div>
+</div></blockquote>
+<ul>
+<li><p class="first">Return &lt;error/&gt; element when client no specific a limit using RSM:</p>
+<div class="highlight-python"><pre>&lt;iq type='error' id='A3' from='logchat.localhost' to='david@localhost/resource'&gt;
+        &lt;error type='modify'&gt;
+                &lt;policy-violation xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/&gt;
+                &lt;text xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'&gt;Too many results&lt;/text&gt;
+        &lt;/error&gt;
+&lt;/iq&gt;</pre>
+</div>
+</li>
+</ul>
+</div>
+<div class="section" id="muc">
+<h2>MUC<a class="headerlink" href="#muc" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>Archiving Messages</li>
+</ol>
+<ul>
+<li><p class="first">Occupant David sends a message to all occupants:</p>
+<div class="highlight-python"><pre>&lt;message from='david@localhost/resource' id='A1' to='roomid@conference.localhost' type='groupchat'&gt;
+  &lt;body&gt;Harpier cries: 'tis time, 'tis time.&lt;/body&gt;
+&lt;/message&gt;</pre>
+</div>
+</li>
+<li><p class="first">Beside message is reflected to all occupants follow the rules of <a class="reference external" href="http://xmpp.org/extensions/xep-0045.html#message">XEP-0045#message</a>  (default of muc), &#8216;david&#8217; will receive the following messages to confirm that message is stored:</p>
+<div class="highlight-python"><pre>&lt;message id='A1' from='roomid@conference.localhost' to='david@localhost/resource' type='groupchat'&gt;
+        &lt;body&gt;Harpier cries: 'tis time, 'tis time.&lt;/body&gt;
+        &lt;archived by='roomid@conference.localhost' id='28482-34567-12345'/&gt;
+&lt;/message&gt;</pre>
+</div>
+</li>
+</ul>
+<blockquote>
+<div></div></blockquote>
+<ul>
+<li><p class="first">Occupant David sends a file to all occupants:</p>
+<div class="highlight-python"><pre>&lt;message from='david@localhost/resource' id='A1' to='roomid@conference.localhost' type='groupchat'&gt;
+        &lt;body&gt;
+                &lt;file&gt;
+                        &lt;name&gt;file name&lt;/name&gt;
+                        &lt;size&gt;file size&lt;/size&gt;
+                        &lt;fileUrl&gt;file url&lt;/fileUrl&gt;
+                        &lt;mimeType&gt;jpg&lt;/imeType&gt;
+                        &lt;thumbnailUrl&gt;thumb url&lt;thumbnailUrl&gt;
+                &lt;/file&gt;
+        &lt;/body&gt;
+&lt;/message&gt;</pre>
+</div>
+</li>
+<li><p class="first">Server response to david to confirm file archieved:</p>
+<div class="highlight-python"><pre>&lt;message from='roomid@conference.localhost' id='A1' to='david@localhost/resource' type='groupchat'&gt;
+        &lt;body&gt;
+                &lt;file&gt;
+                        &lt;name&gt;file name&lt;/name&gt;
+                        &lt;size&gt;file size&lt;/size&gt;
+                        &lt;fileUrl&gt;file url&lt;/fileUrl&gt;
+                        &lt;mimeType&gt;jpg&lt;/imeType&gt;
+                        &lt;thumbnailUrl&gt;thumb url&lt;thumbnailUrl&gt;
+                &lt;/file&gt;
+        &lt;/body&gt;
+        &lt;archived by='roomid@conference.localhost' id='28482-34567-12567'/&gt;
+&lt;/message&gt;</pre>
+</div>
+</li>
+<li><p class="first">Each time occupand &#8216;david&#8217; is added or removed from room, server will auto send an message to report that event is stored:</p>
+<div class="highlight-python"><pre>&lt;message from='roomid@conference.localhost' id='A1' to='david@localhost/resource' type='groupchat'&gt;
+        &lt;body&gt;
+                &lt;event&gt;joined&lt;/event&gt;
+        &lt;/body&gt;
+        &lt;archived by='roomid@conference.localhost' id='28482-34567-12908'/&gt;
+&lt;/message&gt;</pre>
+</div>
+</li>
+</ul>
+<blockquote>
+<div><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">&lt;event&gt; : contain {&#8216;joined&#8217;, &#8216;left&#8217;}.</p>
+</div>
+</div></blockquote>
+<ol class="arabic" start="2">
+<li><p class="first">Query The Archive</p>
+<p>The same rule with c2c query log chat. Some difference as follows:</p>
+<div class="highlight-python"><pre>- To query log chat of muc, client make a request to : " to='muclogchat.localhost' ".
+- &lt;with/&gt; element must contain bare jid of room.</pre>
+</div>
+<p>With Muc query, server will response the matching messages:</p>
+<div class="highlight-python"><pre>&lt;message id='B1' from='muclogchat.localhost' to='david@localhost/resource'&gt;
+        &lt;result xmlns='urn:xmpp:mam:tmp' queryid='Q1' id='28482-98726-73623'&gt;
+                &lt;forwarded xmlns='urn:xmpp:forward:0'&gt;
+                        &lt;delay xmlns='urn:xmpp:delay' stamp='2010-07-10T23:08:25Z'/&gt;
+                        &lt;message from='david@localhost/resource' to='roomid@conference.localhost' type='groupchat'&gt;
+                                &lt;body&gt;Harpier cries: 'tis time, 'tis time.&lt;/body&gt;
+                        &lt;/message&gt;
+                &lt;/forwarded&gt;
+        &lt;/result&gt;
+&lt;/message&gt;
+
+&lt;message id='B2' from='muclogchat.localhost' to='david@localhost/resource'&gt;
+        &lt;result xmlns='urn:xmpp:mam:tmp' queryid='Q1' id='28482-98726-73890'&gt;
+                &lt;forwarded xmlns='urn:xmpp:forward:0'&gt;
+                        &lt;delay xmlns='urn:xmpp:delay' stamp='2010-07-10T23:09:32Z'/&gt;
+                        &lt;message from='david@localhost/resource' to='roomid@conference.localhost' type='groupchat'&gt;
+                                &lt;body&gt;
+                                        &lt;file&gt;
+                                                &lt;name&gt;file name&lt;/name&gt;
+                                                &lt;size&gt;file size&lt;/size&gt;
+                                                &lt;fileUrl&gt;file url&lt;/fileUrl&gt;
+                                                &lt;mimeType&gt;jpg&lt;/imeType&gt;
+                                                &lt;thumbnailUrl&gt;thumb url&lt;thumbnailUrl&gt;
+                                        &lt;/file&gt;
+                                &lt;/body&gt;
+                        &lt;/message&gt;
+                &lt;/forwarded&gt;
+        &lt;/result&gt;
+&lt;/message&gt;
+
+&lt;message id='B3' from='muclogchat.localhost' to='david@localhost/resource'&gt;
+        &lt;result xmlns='urn:xmpp:mam:tmp' queryid='Q1' id='28482-98726-70990'&gt;
+                &lt;forwarded xmlns='urn:xmpp:forward:0'&gt;
+                        &lt;delay xmlns='urn:xmpp:delay' stamp='2010-07-10T23:09:50Z'/&gt;
+                        &lt;message from='david@localhost/resource' to='roomid@conference.localhost' type='groupchat'&gt;
+                                &lt;body&gt;
+                                        &lt;event&gt;joined&lt;/event&gt;
+                                &lt;/body&gt;
+                        &lt;/message&gt;
+                &lt;/forwarded&gt;
+        &lt;/result&gt;
+&lt;/message&gt;
+..........</pre>
+</div>
+<p>After finishing sending all matching result, an &lt;iq&gt; result will be sent to inform the complete:</p>
+<div class="highlight-python"><pre>&lt;iq type='result' id='A1' from='muclogchat.localhost' to='david@localhost/resource'&gt;
+&lt;query xmlns='urn:xmpp:mam:tmp' queryid='Q1'&gt;
+        &lt;with&gt;roomid@conference.localhost&lt;/with&gt;
+        &lt;start&gt;2010-06-07T00:00:00Z&lt;/start&gt;
+        &lt;end&gt;2010-07-07T05:03:27Z&lt;/end&gt;
+        &lt;set xmlns='http://jabber.org/protocol/rsm'&gt;
+                &lt;first index='0'&gt;28482-98726-73623&lt;/first&gt;
+                &lt;last&gt;28482-98726-80012&lt;/last&gt;
+                &lt;count&gt;1000&lt;/count&gt;
+        &lt;/set&gt;
+&lt;/query&gt;
+&lt;/iq&gt;</pre>
+</div>
+</li>
+</ol>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">LOG CHAT</a><ul>
+<li><a class="reference internal" href="#c2c">C2C</a></li>
+<li><a class="reference internal" href="#muc">MUC</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="roster.html"
+                        title="previous chapter">Roster</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="logchatdb.html"
+                        title="next chapter">DATABASE</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/logchat.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="logchatdb.html" title="DATABASE"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="roster.html" title="Roster"
+             >previous</a> |</li>
+        <li><a href="index.html">HistoryChat 00 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, HueTran.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b3.
+    </div>
+  </body>
+</html>
